@@ -1,0 +1,93 @@
+package com.littlewords.app.ui
+
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+private fun Context.activity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.activity()
+    else -> null
+}
+
+@Composable fun LittleWordsApp(model: ReadingViewModel) {
+    val state by model.state.collectAsStateWithLifecycle()
+    val busy by model.busy.collectAsStateWithLifecycle()
+    val error by model.error.collectAsStateWithLifecycle()
+    var page by rememberSaveable { mutableStateOf("home") }
+    var paused by rememberSaveable { mutableStateOf(false) }
+    val reading = page == "reading"
+    val activity = LocalContext.current.activity()
+    DisposableEffect(reading, paused, activity) {
+        val window = activity?.window
+        if (window != null) {
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            if (reading && !paused) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
+    BackHandler(page != "home") { if (reading) paused = true else page = "home" }
+    LittleWordsTheme(state.settings.theme) {
+        val lightBars = MaterialTheme.colorScheme.background.luminance() > 0.5f
+        SideEffect {
+            activity?.window?.let { window ->
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = lightBars
+                    isAppearanceLightNavigationBars = lightBars
+                }
+            }
+        }
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            if (!state.loaded) Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                CircularProgressIndicator()
+            } else when (page) {
+                "home" -> HomeScreen(state, busy,
+                    onStart = { model.start { page = "reading"; paused = false } },
+                    onSettings = { page = "settings" }, onProgress = { page = "progress" })
+                "settings" -> SettingsScreen(state.settings, state.session != null, busy,
+                    onTheme = model::theme,
+                    onSave = { model.saveSettings(it) { page = "home" } }, onBack = { page = "home" })
+                "progress" -> ProgressScreen(state, onBack = { page = "home" })
+                "reading" -> state.card?.let { card ->
+                    PracticeScreen(card, state.settings, busy || paused, onScore = { model.score(card.id, it) }, onPause = { paused = true })
+                } ?: Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
+            }
+        }
+        if (paused && reading) AlertDialog(
+            onDismissRequest = { paused = false },
+            title = { Text("Take your time") },
+            text = {
+                Column {
+                    Text("Your place is saved. A little practice is enough.")
+                    if (state.session?.lastAttemptId != null) TextButton(enabled = !busy, onClick = { model.undo { paused = false } }) { Text("Undo last swipe") }
+                    TextButton(enabled = !busy, onClick = { page = "home"; paused = false }) { Text("Save & go home") }
+                }
+            },
+            confirmButton = { Button(enabled = !busy, onClick = { paused = false }) { Text("Keep reading") } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { model.end { page = "progress"; paused = false } }) { Text("End practice") } },
+        )
+        error?.let { message -> AlertDialog(onDismissRequest = model::clearError,
+            title = { Text("Let's try that again") }, text = { Text(message) },
+            confirmButton = { TextButton(onClick = model::clearError) { Text("OK") } }) }
+    }
+}
