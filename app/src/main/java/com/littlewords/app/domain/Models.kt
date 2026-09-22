@@ -8,9 +8,21 @@ enum class Category {
     FIVE_REAL,
 }
 
+enum class PracticeMode {
+    WORDS,
+    SENTENCES,
+}
+
+const val SENTENCE_CATEGORY = "SENTENCE"
+
 data class Word(
     val text: String,
     val category: Category,
+    val patterns: Set<String>,
+)
+
+data class Sentence(
+    val text: String,
     val patterns: Set<String>,
 )
 
@@ -28,4 +40,5 @@ data class PracticeConfig(
         "short_o",
         "short_u",
     ),
+    val mode: PracticeMode = PracticeMode.WORDS,
 )

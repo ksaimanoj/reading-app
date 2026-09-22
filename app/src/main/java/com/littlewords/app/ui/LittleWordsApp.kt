@@ -16,6 +16,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 private fun Context.activity(): Activity? = when (this) {
     is Activity -> this
@@ -29,8 +32,31 @@ private fun Context.activity(): Activity? = when (this) {
     val error by model.error.collectAsStateWithLifecycle()
     var page by rememberSaveable { mutableStateOf("home") }
     var paused by rememberSaveable { mutableStateOf(false) }
+    var pendingProfileId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(state.profileId, pendingProfileId) {
+        if (pendingProfileId != null && state.profileId == pendingProfileId) {
+            page = "home"
+            pendingProfileId = null
+        }
+    }
     val reading = page == "reading"
     val activity = LocalContext.current.activity()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var foreground by remember(lifecycleOwner) {
+        mutableStateOf(lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, _ ->
+            foreground = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    DisposableEffect(reading, paused, foreground, state.card?.id) {
+        val cardId = state.card?.id
+        if (reading && !paused && foreground && cardId != null) model.startTiming(cardId)
+        onDispose { if (cardId != null) model.stopTiming(cardId) }
+    }
     DisposableEffect(reading, paused, activity) {
         val window = activity?.window
         if (window != null) {
@@ -62,8 +88,13 @@ private fun Context.activity(): Activity? = when (this) {
                 CircularProgressIndicator()
             } else when (page) {
                 "home" -> HomeScreen(state, busy,
-                    onStart = { model.start { page = "reading"; paused = false } },
-                    onSettings = { page = "settings" }, onProgress = { page = "progress" })
+                    onStart = { mode -> model.start(mode) { page = "reading"; paused = false } },
+                    onSettings = { page = "settings" }, onProgress = { page = "progress" },
+                    onProfiles = { page = "profiles" })
+                "profiles" -> ProfilesScreen(state.profiles, state.profileId, busy,
+                    onSelect = { id -> model.selectProfile(id) { pendingProfileId = id } },
+                    onCreate = { name -> model.createProfile(name) { pendingProfileId = it } },
+                    onBack = { page = "home" })
                 "settings" -> SettingsScreen(state.settings, state.session != null, busy,
                     onTheme = model::theme,
                     onSave = { model.saveSettings(it) { page = "home" } }, onBack = { page = "home" })

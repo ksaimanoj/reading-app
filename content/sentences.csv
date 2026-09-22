@@ -1,0 +1,131 @@
+sentence,patterns,note
+dad ran.,short_a,reviewed subject and action
+dad sat.,short_a,reviewed subject and action
+cat ran.,short_a,reviewed subject and action
+cat sat.,short_a,reviewed subject and action
+hen ran.,short_a|short_e,reviewed subject and action
+hen sat.,short_a|short_e,reviewed subject and action
+pig dug.,short_i|short_u,reviewed subject and action
+pig ran.,short_a|short_i,reviewed subject and action
+dog sat.,short_a|short_o,reviewed subject and action
+dog ran.,short_a|short_o,reviewed subject and action
+fox hid.,short_i|short_o,reviewed subject and action
+kid ran.,short_a|short_i,reviewed subject and action
+kid sat.,short_a|short_i,reviewed subject and action
+man ran.,short_a,reviewed subject and action
+man sat.,short_a,reviewed subject and action
+mom sat.,short_a|short_o,reviewed subject and action
+mom ran.,short_a|short_o,reviewed subject and action
+bug hid.,short_i|short_u,reviewed subject and action
+pup dug.,short_u,reviewed subject and action
+sun set.,short_e|short_u,reviewed subject and action
+men ran.,short_a|short_e,reviewed subject and action
+dad can jog.,short_a|short_o,reviewed sentence with helper verb
+mom can hop.,short_a|short_o,reviewed sentence with helper verb
+kid can run.,short_a|short_i|short_u,reviewed sentence with helper verb
+hen can run.,short_a|short_e|short_u,reviewed sentence with helper verb
+cat can nap.,short_a,reviewed sentence with helper verb
+dog can sit.,short_a|short_i|short_o,reviewed sentence with helper verb
+pig can dig.,short_a|short_i,reviewed sentence with helper verb
+man can jog.,short_a|short_o,reviewed sentence with helper verb
+dad can sit.,short_a|short_i,reviewed sentence with helper verb
+fish can swim.,short_a|short_i|blends|sh,reviewed sentence with digraph and blend
+dad can fish.,short_a|short_i|sh,reviewed sentence with digraph
+the cat sat.,short_a|th|tricky,reviewed sentence with common tricky word
+the dog ran.,short_a|short_o|th|tricky,reviewed sentence with common tricky word
+the red hen ran.,short_a|short_e|th|tricky,reviewed sentence with common tricky word
+the big pig dug.,short_i|short_u|th|tricky,reviewed sentence with common tricky word
+the fox hid.,short_i|short_o|th|tricky,reviewed sentence with common tricky word
+the sun is hot.,short_o|short_u|th|tricky,reviewed sentence with common tricky words
+it is red.,short_e|short_i|tricky,reviewed sentence with common tricky word
+it is hot.,short_i|short_o|tricky,reviewed sentence with common tricky word
+sit on the mat.,short_a|short_i|short_o|th|tricky,reviewed instruction sentence
+hop on the log.,short_o|th|tricky,reviewed instruction sentence
+pet the cat.,short_a|short_e|th|tricky,reviewed instruction sentence
+hug the pup.,short_u|th|tricky,reviewed instruction sentence
+dig in the mud.,short_i|short_u|th|tricky,reviewed instruction sentence
+get in the van.,short_a|short_e|short_i|th|tricky,reviewed instruction sentence
+the bug is in the cup.,short_i|short_u|th|tricky,reviewed location sentence
+the fox is in the den.,short_e|short_i|short_o|th|tricky,reviewed location sentence
+the pup is on the rug.,short_o|short_u|th|tricky,reviewed location sentence
+the cat hid in the box.,short_a|short_i|short_o|th|tricky,reviewed location sentence
+the fish can swim.,short_a|short_i|blends|sh|th|tricky,reviewed sentence with digraph and blend
+the ship is big.,short_i|sh|th|tricky,reviewed sentence with digraph
+the shop is shut.,short_o|short_u|sh|th|tricky,reviewed sentence with digraph
+the chick can peck.,short_a|short_e|short_i|ch|th|ck|tricky,reviewed sentence with digraph and ending
+the duck can swim.,short_a|short_i|short_u|blends|th|ck|tricky,reviewed sentence with blend and ending
+the frog can hop.,short_a|short_o|blends|th|tricky,reviewed sentence with blend
+the bell fell.,short_e|th|double|tricky,reviewed sentence with double consonants
+the drum fell.,short_e|short_u|blends|th|double|tricky,reviewed sentence with blend and double consonant
+the black cat sat.,short_a|blends|th|ck|tricky,reviewed sentence with blend and ending
+the red hen went.,short_e|blends|th|tricky,reviewed sentence with blend
+cat can sit.,short_a|short_i,original decodable sentence; parent review recommended
+cat can run.,short_a|short_u,original decodable sentence; parent review recommended
+cat can hop.,short_a|short_o,original decodable sentence; parent review recommended
+cat got wet.,short_a|short_e|short_o,original decodable sentence; parent review recommended
+cat hid.,short_a|short_i,original decodable sentence; parent review recommended
+dog dug.,short_o|short_u,original decodable sentence; parent review recommended
+dog can run.,short_a|short_o|short_u,original decodable sentence; parent review recommended
+dog got wet.,short_e|short_o,original decodable sentence; parent review recommended
+dog hid.,short_i|short_o,original decodable sentence; parent review recommended
+fox ran.,short_a|short_o,original decodable sentence; parent review recommended
+fox sat.,short_a|short_o,original decodable sentence; parent review recommended
+fox can hop.,short_a|short_o,original decodable sentence; parent review recommended
+hen hid.,short_e|short_i,original decodable sentence; parent review recommended
+hen can sit.,short_a|short_e|short_i,original decodable sentence; parent review recommended
+pig sat.,short_a|short_i,original decodable sentence; parent review recommended
+pig hid.,short_i,original decodable sentence; parent review recommended
+pig can hop.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+pup hid.,short_i|short_u,original decodable sentence; parent review recommended
+pup ran.,short_a|short_u,original decodable sentence; parent review recommended
+pup can sit.,short_a|short_i|short_u,original decodable sentence; parent review recommended
+bug sat.,short_a|short_u,original decodable sentence; parent review recommended
+bug ran.,short_a|short_u,original decodable sentence; parent review recommended
+bug can hop.,short_a|short_o|short_u,original decodable sentence; parent review recommended
+kid hid.,short_i,original decodable sentence; parent review recommended
+kid dug.,short_i|short_u,original decodable sentence; parent review recommended
+kid can hop.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+dad can run.,short_a|short_u,original decodable sentence; parent review recommended
+dad can nap.,short_a,original decodable sentence; parent review recommended
+dad got wet.,short_a|short_e|short_o,original decodable sentence; parent review recommended
+mom can sit.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+mom can run.,short_a|short_o|short_u,original decodable sentence; parent review recommended
+mom got wet.,short_e|short_o,original decodable sentence; parent review recommended
+man can run.,short_a|short_u,original decodable sentence; parent review recommended
+man can sit.,short_a|short_i,original decodable sentence; parent review recommended
+man got wet.,short_a|short_e|short_o,original decodable sentence; parent review recommended
+red hen hid.,short_e|short_i,original decodable sentence; parent review recommended
+big pig sat.,short_a|short_i,original decodable sentence; parent review recommended
+big dog ran.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+bad dog hid.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+mad cat sat.,short_a,original decodable sentence; parent review recommended
+sad dad sat.,short_a,original decodable sentence; parent review recommended
+wet dog ran.,short_a|short_e|short_o,original decodable sentence; parent review recommended
+red fox ran.,short_a|short_e|short_o,original decodable sentence; parent review recommended
+mom fed pup.,short_e|short_o|short_u,original decodable sentence; parent review recommended
+dad fed pup.,short_a|short_e|short_u,original decodable sentence; parent review recommended
+man fed hen.,short_a|short_e,original decodable sentence; parent review recommended
+pig got wet.,short_e|short_i|short_o,original decodable sentence; parent review recommended
+kid got wet.,short_e|short_i|short_o,original decodable sentence; parent review recommended
+hen got wet.,short_e|short_o,original decodable sentence; parent review recommended
+cat sat on mat.,short_a|short_o,original decodable sentence; parent review recommended
+dog sat on mat.,short_a|short_o,original decodable sentence; parent review recommended
+pig sat on mat.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+pup sat on rug.,short_a|short_o|short_u,original decodable sentence; parent review recommended
+fox sat on log.,short_a|short_o,original decodable sentence; parent review recommended
+mom sat on log.,short_a|short_o,original decodable sentence; parent review recommended
+dad sat on log.,short_a|short_o,original decodable sentence; parent review recommended
+kid sat on mat.,short_a|short_i|short_o,original decodable sentence; parent review recommended
+man sat on rug.,short_a|short_o|short_u,original decodable sentence; parent review recommended
+cat can nap on mat.,short_a|short_o,original decodable sentence; parent review recommended
+pig can sit in mud.,short_a|short_i|short_u,original decodable sentence; parent review recommended
+fox can nap in den.,short_a|short_e|short_i|short_o,original decodable sentence; parent review recommended
+pup can nap on rug.,short_a|short_o|short_u,original decodable sentence; parent review recommended
+hen can sit in hut.,short_a|short_e|short_i|short_u,original decodable sentence; parent review recommended
+dog can dig in mud.,short_a|short_i|short_o|short_u,original decodable sentence; parent review recommended
+kid can dig in mud.,short_a|short_i|short_u,original decodable sentence; parent review recommended
+dad can jog in sun.,short_a|short_i|short_o|short_u,original decodable sentence; parent review recommended
+mom can jog in sun.,short_a|short_i|short_o|short_u,original decodable sentence; parent review recommended
+man can sit in sun.,short_a|short_i|short_u,original decodable sentence; parent review recommended
+cat can sit in sun.,short_a|short_i|short_u,original decodable sentence; parent review recommended
+dog can run in sun.,short_a|short_i|short_o|short_u,original decodable sentence; parent review recommended

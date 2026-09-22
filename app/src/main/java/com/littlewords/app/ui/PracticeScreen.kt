@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.littlewords.app.data.AppSettings
 import com.littlewords.app.data.CardEntity
 import com.littlewords.app.domain.Category
+import com.littlewords.app.domain.SENTENCE_CATEGORY
 import kotlin.math.abs
 
 @Composable fun PracticeScreen(card: CardEntity, settings: AppSettings, busy: Boolean, onScore: (Boolean) -> Unit, onPause: () -> Unit) {
@@ -25,11 +26,14 @@ import kotlin.math.abs
     var vertical by remember(card.id) { mutableFloatStateOf(0f) }
     val threshold = with(LocalDensity.current) { 64.dp.toPx() }
     val latestScore by rememberUpdatedState(onScore)
+    val isSentence = card.category == SENTENCE_CATEGORY
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {
                 if (settings.showSillyMarker && card.category == Category.THREE_SILLY.name)
                     Text("✦  silly word", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else if (isSentence)
+                    Text("short sentence", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onPause, enabled = !busy) { Text("Pause") }
         }
@@ -46,8 +50,12 @@ import kotlin.math.abs
                 )
             }, contentAlignment = Alignment.Center) {
             val fontScale = LocalDensity.current.fontScale
-            val size = (minOf(maxHeight.value * .62f, (maxWidth.value - 72f) / (card.word.length * .68f)) / fontScale).coerceIn(28f, 240f)
-            Text(card.word, fontSize = size.sp, fontWeight = FontWeight.Medium, maxLines = 1,
+            val heightScale = if (isSentence) .34f else .62f
+            val widthScale = if (isSentence) .52f else .68f
+            val maximum = if (isSentence) 88f else 240f
+            val minimum = if (isSentence) 30f else 28f
+            val size = (minOf(maxHeight.value * heightScale, (maxWidth.value - 72f) / (card.word.length * widthScale)) / fontScale).coerceIn(minimum, maximum)
+            Text(card.word, fontSize = size.sp, lineHeight = (size * 1.18f).sp, fontWeight = FontWeight.Medium, maxLines = if (isSentence) 2 else 1,
                 textAlign = TextAlign.Center, modifier = Modifier.testTag("readingWord").graphicsLayer { translationX = drag * .15f })
         }
         if (settings.showButtons) Row(Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {

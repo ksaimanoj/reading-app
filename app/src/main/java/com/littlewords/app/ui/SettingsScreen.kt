@@ -29,10 +29,10 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
     var showLetters by remember { mutableStateOf(false) }
     var buttons by remember(settings.showButtons) { mutableStateOf(settings.showButtons) }
     var sillyMarker by remember(settings.showSillyMarker) { mutableStateOf(settings.showSillyMarker) }
-    val config = PracticeConfig(enabledCategories, letters, patterns)
+    val config = PracticeConfig(enabledCategories, letters, patterns, settings.config.mode)
     val errors = Selector.validate(config)
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
-        PageHeader("Make it his own", onBack) {
+        PageHeader("Make it their own", onBack) {
             Button(enabled = !busy && errors.isEmpty(), onClick = { onSave(AppSettings(config, settings.theme, buttons, sillyMarker)) }) { Text("Save & back") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -62,15 +62,21 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Sounds he knows", style = MaterialTheme.typography.titleMedium)
+                Text("Sounds they know", style = MaterialTheme.typography.titleMedium)
                 Text("Only words using these sounds and patterns will appear.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Catalog.patternLabels.forEach { (key, label) -> FilterChip(selected = key in patterns,
                         onClick = { patterns = if (key in patterns) patterns - key else patterns + key }, label = { Text(label) }) }
                 }
+                val sentenceCount = SentenceSelector.eligible(config).size
+                Text(
+                    "$sentenceCount reviewed short sentences available with these sounds.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (sentenceCount == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
                 TextButton(onClick = { showLetters = !showLetters }) { Text(if (showLetters) "Hide individual letters" else "Choose individual letters") }
                 if (showLetters) {
-                    Text("Keep only the letters he has learned. Sound patterns above also apply.", style = MaterialTheme.typography.bodySmall)
+                    Text("Keep only the letters they have learned. Sound patterns above also apply.", style = MaterialTheme.typography.bodySmall)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ('a'..'z').forEach { letter -> FilterChip(selected = letter in letters,
                             onClick = { letters = if (letter in letters) letters.replace(letter.toString(), "") else (letters + letter).toList().sorted().joinToString("") },

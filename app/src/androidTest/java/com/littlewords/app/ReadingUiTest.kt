@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.test.core.app.ApplicationProvider
 import com.littlewords.app.data.*
 import com.littlewords.app.domain.Category
+import com.littlewords.app.domain.SENTENCE_CATEGORY
 import com.littlewords.app.ui.LittleWordsApp
 import com.littlewords.app.ui.ReadingViewModel
 import kotlinx.coroutines.runBlocking
@@ -27,6 +28,17 @@ class ReadingUiTest {
     }
     @After fun cleanup() { db.close(); context.deleteDatabase(name) }
 
+    @Test fun canCreateTestingProfileAndReturnToGagan() {
+        compose.onNodeWithText("Gagan ▾").performClick()
+        compose.onNodeWithText("Gagan · Current").assertExists()
+        compose.onNodeWithText("Child's name or Testing").performTextInput("Testing")
+        compose.onNodeWithText("Create & switch").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("Testing ▾").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Testing ▾").performClick()
+        compose.onNodeWithText("Gagan").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("Gagan ▾").fetchSemanticsNodes().isNotEmpty() }
+    }
+
     @Test fun gesturesAndUndoUpdateStoredHistory() {
         compose.onNodeWithText("Start reading").performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithTag("readingWord").fetchSemanticsNodes().isNotEmpty() }
@@ -39,6 +51,33 @@ class ReadingUiTest {
         compose.onNodeWithText("Pause").performClick()
         compose.onNodeWithText("Undo last swipe").performClick()
         compose.waitUntil(10000) { runBlocking { repo.history.first().count { it.voidedAt == null } == 1 } }
+    }
+
+    @Test fun shortSentenceModeStartsAReviewedSentenceSession() {
+        compose.onNodeWithText("Try short sentences").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("short sentence").fetchSemanticsNodes().isNotEmpty() }
+
+        val card = runBlocking { repo.currentCard.first { it != null }!! }
+        assertEquals(SENTENCE_CATEGORY, card.category)
+        assertTrue(card.word.endsWith("."))
+        assertTrue(card.word.contains(" "))
+    }
+
+    @Test fun progressExpandsASectionWithItsReadingAndTiming() {
+        compose.onNodeWithText("Try short sentences").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("readingSurface").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("readingSurface").performTouchInput { swipeRight() }
+        compose.waitUntil(10000) { runBlocking { repo.history.first().size == 1 } }
+        val history = runBlocking { repo.history.first().single() }
+        assertNotNull(history.durationMs)
+
+        compose.onNodeWithText("Pause").performClick()
+        compose.onNodeWithText("Save & go home").performClick()
+        compose.onNodeWithText("Progress").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("session_${history.sessionId}").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("session_${history.sessionId}").performClick()
+        compose.onNodeWithTag("session_attempt_${history.attemptId}").assertExists()
+        compose.onNodeWithText(history.word).assertExists()
     }
 
     @Test fun appearanceChoiceIsSaved() {

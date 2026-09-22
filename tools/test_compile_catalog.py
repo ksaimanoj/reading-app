@@ -16,6 +16,15 @@ def row(word, category, patterns, note="", line=2):
     )
 
 
+def sentence_row(sentence, patterns, note="reviewed", line=2):
+    return compiler.SentenceRow(
+        line=line,
+        sentence=sentence,
+        patterns=tuple(patterns.split("|")) if patterns else (),
+        note=note,
+    )
+
+
 class CatalogueCompilerTest(unittest.TestCase):
     def test_duplicate_word_names_both_rows(self):
         rows = [
@@ -129,6 +138,38 @@ class CatalogueCompilerTest(unittest.TestCase):
 
             self.assertFalse(compiler.compile_files(source, kotlin, report, check=True, minimum_size=0, require_coverage=False))
             self.assertEqual("stale", kotlin.read_text(encoding="utf-8"))
+
+    def test_sentence_validation_requires_reviewed_real_words_and_exact_patterns(self):
+        words = [
+            row("cat", "THREE_REAL", "short_a"),
+            row("sat", "THREE_REAL", "short_a", line=3),
+        ]
+
+        self.assertEqual([], compiler.validate_sentences(
+            [sentence_row("cat sat.", "short_a")], words, minimum_size=0,
+        ))
+        unknown = compiler.validate_sentences(
+            [sentence_row("cat zed.", "short_a")], words, minimum_size=0,
+        )
+        wrong_patterns = compiler.validate_sentences(
+            [sentence_row("cat sat.", "short_i")], words, minimum_size=0,
+        )
+
+        self.assertTrue(any("not in the reviewed real-word catalogue" in error for error in unknown))
+        self.assertTrue(any("patterns must exactly match" in error for error in wrong_patterns))
+
+    def test_sentence_rendering_is_deterministic(self):
+        first = compiler.render_sentence_kotlin([
+            sentence_row("dad sat.", "short_a"),
+            sentence_row("cat ran.", "short_a"),
+        ])
+        second = compiler.render_sentence_kotlin([
+            sentence_row("cat ran.", "short_a"),
+            sentence_row("dad sat.", "short_a"),
+        ])
+
+        self.assertEqual(first, second)
+        self.assertLess(first.index('Sentence("cat ran."'), first.index('Sentence("dad sat."'))
 
 
 if __name__ == "__main__":

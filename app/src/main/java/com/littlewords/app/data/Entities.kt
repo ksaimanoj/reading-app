@@ -1,15 +1,23 @@
 package com.littlewords.app.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.littlewords.app.domain.Category
 import com.littlewords.app.domain.PracticeConfig
+import com.littlewords.app.domain.PracticeMode
 import org.json.JSONArray
 import org.json.JSONObject
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+@Entity(tableName = "profiles")
+data class ProfileEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String)
+
+@Entity(tableName = "active_profile")
+data class ActiveProfileEntity(@PrimaryKey val id: Int = 1, val profileId: Long)
 
 data class AppSettings(
     val config: PracticeConfig = PracticeConfig(),
@@ -25,6 +33,7 @@ object ConfigCodec {
         ))
         put("letters", config.letters)
         put("patterns", JSONArray(config.patterns.sorted()))
+        put("mode", config.mode.name)
     }.toString()
 
     fun decode(value: String): PracticeConfig = JSONObject(value).let { json ->
@@ -41,13 +50,14 @@ object ConfigCodec {
             enabledCategories = enabledCategories,
             letters = json.getString("letters"),
             patterns = (0 until patterns.length()).map { patterns.getString(it) }.toSet(),
+            mode = if (json.has("mode")) PracticeMode.valueOf(json.getString("mode")) else PracticeMode.WORDS,
         )
     }
 }
 
 @Entity(tableName = "settings")
 data class SettingsEntity(
-    @PrimaryKey val id: Int = 1,
+    @PrimaryKey val id: Long = 1,
     val config: String,
     val theme: String,
     val showButtons: Boolean,
@@ -55,7 +65,8 @@ data class SettingsEntity(
 ) {
     fun toSettings() = AppSettings(ConfigCodec.decode(config), ThemeMode.valueOf(theme), showButtons, showSillyMarker)
     companion object {
-        fun from(settings: AppSettings) = SettingsEntity(
+        fun from(settings: AppSettings, profileId: Long = 1) = SettingsEntity(
+            id = profileId,
             config = ConfigCodec.encode(settings.config), theme = settings.theme.name,
             showButtons = settings.showButtons, showSillyMarker = settings.showSillyMarker,
         )
@@ -65,6 +76,7 @@ data class SettingsEntity(
 @Entity(tableName = "sessions")
 data class SessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(defaultValue = "1") val profileId: Long = 1,
     val startedAt: Long,
     val endedAt: Long? = null,
     val config: String,
@@ -99,6 +111,7 @@ data class AttemptEntity(
     val success: Boolean,
     val respondedAt: Long,
     val voidedAt: Long? = null,
+    val durationMs: Long? = null,
 )
 
 data class HistoryItem(
@@ -109,4 +122,5 @@ data class HistoryItem(
     val success: Boolean,
     val respondedAt: Long,
     val voidedAt: Long?,
+    val durationMs: Long?,
 )

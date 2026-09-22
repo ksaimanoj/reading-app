@@ -18,4 +18,5 @@ object Catalog {
     )
 
     val words: List<Word> = CatalogData.words
+    val sentences: List<Sentence> = SentenceCatalogData.sentences
 }

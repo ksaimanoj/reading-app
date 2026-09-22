@@ -10,6 +10,9 @@ import org.junit.Assert.*
 import org.junit.runner.RunWith
 import com.littlewords.app.domain.Category
 import com.littlewords.app.domain.PracticeConfig
+import com.littlewords.app.domain.PracticeMode
+import com.littlewords.app.domain.SENTENCE_CATEGORY
+import com.littlewords.app.domain.SentenceSelector
 
 @RunWith(AndroidJUnit4::class)
 class RepositoryTest {
@@ -24,6 +27,50 @@ class RepositoryTest {
     }
     @After fun cleanup() { db.close(); context.deleteDatabase(databaseName) }
 
+    @Test fun profilesKeepSettingsProgressAndOpenSessionsSeparateAcrossRestart() = runBlocking {
+        val gaganSettings = AppSettings(theme = ThemeMode.DARK, showButtons = true)
+        repo.saveSettings(gaganSettings)
+        repo.startSession()
+        val gaganCard = repo.currentCard.first { it != null }!!
+        assertTrue(repo.score(gaganCard.id, false))
+        val gaganNext = repo.currentCard.first { it?.id != gaganCard.id && it != null }!!
+
+        val testingId = repo.createProfile(" Testing ")
+        assertEquals("Testing", repo.profiles.first().last().name)
+        assertEquals(testingId, repo.reading.first().profileId)
+        assertEquals(AppSettings(), repo.settings.first())
+        assertTrue(repo.history.first().isEmpty())
+        assertNull(repo.activeSession.first())
+        repo.startSession()
+        val testCard = repo.currentCard.first { it != null }!!
+        assertTrue(repo.score(testCard.id, true))
+        assertEquals(1, repo.history.first().size)
+
+        repo.selectProfile(1)
+        assertEquals(gaganSettings, repo.settings.first())
+        assertEquals(gaganNext.id, repo.currentCard.first()!!.id)
+        assertEquals(gaganCard.word, repo.history.first().single().word)
+        assertFalse(repo.history.first().single().success)
+
+        db.close()
+        db = ReadingDatabase.open(context, databaseName)
+        repo = ReadingRepository(db)
+        assertEquals(1L, repo.reading.first().profileId)
+        assertEquals(gaganNext.id, repo.currentCard.first()!!.id)
+        repo.selectProfile(testingId)
+        assertEquals(1, repo.history.first().size)
+        assertTrue(repo.history.first().single().success)
+        assertEquals(AppSettings(), repo.settings.first())
+    }
+
+    @Test fun duplicateProfileNamesAreRejectedIgnoringCase() = runBlocking {
+        try {
+            repo.createProfile(" gAGan ")
+            fail("Duplicate profile should be rejected")
+        } catch (_: IllegalArgumentException) { }
+        assertEquals(listOf("Gagan"), repo.profiles.first().map { it.name })
+    }
+
     @Test fun scoringIsDurableAndConcurrentDuplicateIsIgnored() = runBlocking {
         repo.startSession()
         val card = repo.currentCard.first { it != null }!!
@@ -37,6 +84,51 @@ class RepositoryTest {
         repo = ReadingRepository(db)
         assertEquals(next.id, repo.currentCard.first()!!.id)
         assertEquals(1, repo.history.first().size)
+    }
+
+    @Test fun sentenceSessionStoresExactReviewedSentenceAndMode() = runBlocking {
+        repo.startSession(PracticeMode.SENTENCES)
+
+        val session = repo.activeSession.first()!!
+        val card = repo.currentCard.first { it != null }!!
+
+        assertEquals(PracticeMode.SENTENCES, ConfigCodec.decode(session.config).mode)
+        assertEquals(SENTENCE_CATEGORY, card.category)
+        assertTrue(card.word.endsWith("."))
+        assertTrue(card.word.contains(" "))
+        assertTrue(repo.score(card.id, true))
+        assertEquals(card.word, repo.history.first().single().word)
+    }
+
+    @Test fun sentenceSessionShowsEveryEligibleSentenceBeforeRepeating() = runBlocking {
+        val config = PracticeConfig(patterns = setOf("short_a"))
+        val eligible = SentenceSelector.eligible(config).map { it.text }.toSet()
+        assertTrue(eligible.size > 1)
+        repo.saveSettings(AppSettings(config = config))
+        repo.startSession(PracticeMode.SENTENCES)
+
+        val seen = mutableSetOf<String>()
+        repeat(eligible.size) {
+            val card = repo.currentCard.first { it != null }!!
+            assertTrue(seen.add(card.word))
+            assertTrue(repo.score(card.id, true))
+        }
+        assertEquals(eligible, seen)
+        val next = repo.currentCard.first { it != null }!!
+        assertTrue(next.word in seen)
+    }
+
+    @Test fun readingTimeIsStoredWithTheAttemptAndOlderAttemptsCanBeUnknown() = runBlocking {
+        repo.startSession()
+        val first = repo.currentCard.first { it != null }!!
+        assertTrue(repo.score(first.id, true, durationMs = 2_350))
+
+        val timed = repo.history.first().single()
+        assertEquals(2_350L, timed.durationMs)
+
+        val second = repo.currentCard.first { it?.id != first.id && it != null }!!
+        assertTrue(repo.score(second.id, false))
+        assertNull(repo.history.first().first().durationMs)
     }
 
     @Test fun undoKeepsAuditAndRescoringCountsOnce() = runBlocking {
@@ -96,10 +188,10 @@ class RepositoryTest {
         val first = repo.currentCard.first { it != null }!!
         repo.score(first.id, true)
         val displaced = repo.currentCard.first { it?.id != first.id && it != null }!!
-        assertEquals(listOf(displaced.word, first.word), db.dao().recentPresentedWords(5))
+        assertEquals(listOf(displaced.word, first.word), db.dao().recentPresentedWords(1, 5))
 
         assertTrue(repo.undo())
-        assertEquals(listOf(displaced.word), db.dao().recentPresentedWords(5))
+        assertEquals(listOf(displaced.word), db.dao().recentPresentedWords(1, 5))
         assertTrue(repo.score(first.id, true))
         val replacement = repo.currentCard.first { it?.id != first.id && it != null }!!
         assertNotEquals(displaced.word, replacement.word)
