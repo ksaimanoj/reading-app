@@ -6,6 +6,11 @@ import com.littlewords.app.domain.PracticeMode
 import com.littlewords.app.domain.SENTENCE_CATEGORY
 import com.littlewords.app.domain.SentenceSelector
 import com.littlewords.app.domain.Selector
+import com.littlewords.app.domain.CATALOGUE_VERSION
+import com.littlewords.app.domain.Catalog
+import com.littlewords.app.domain.ProgressAttempt
+import com.littlewords.app.domain.StageCatalog
+import com.littlewords.app.domain.WordProgressCalculator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -19,6 +24,7 @@ data class ProfileReading(
     val currentCard: CardEntity?,
     val history: List<HistoryItem>,
     val sessions: List<SessionEntity>,
+    val achievements: List<StageAchievementEntity> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -31,7 +37,7 @@ class ReadingRepository(private val db: ReadingDatabase) {
             dao.observeCurrentCard(profileId), dao.observeHistory(profileId), dao.observeSessions(profileId),
         ) { settings, session, card, history, sessions ->
             ProfileReading(profileId, settings?.toSettings() ?: AppSettings(), session, card, history, sessions)
-        }
+        }.combine(dao.observeAchievements(profileId)) { reading, achievements -> reading.copy(achievements = achievements) }
     }
     val settings = reading.map { it.settings }
     val activeSession = reading.map { it.activeSession }
@@ -52,6 +58,24 @@ class ReadingRepository(private val db: ReadingDatabase) {
     suspend fun selectProfile(id: Long) = db.withTransaction {
         require(dao.hasProfile(id)) { "That profile is no longer available." }
         dao.selectProfile(ActiveProfileEntity(profileId = id))
+    }
+
+    suspend fun syncAchievementsForAllProfiles() = db.withTransaction {
+        dao.profiles().forEach { syncAchievements(it.id) }
+    }
+
+    private suspend fun syncAchievements(profileId: Long) {
+        val attempts = dao.validHistory(profileId).map {
+            ProgressAttempt(it.word, it.category, it.sessionId, it.success, it.attemptId)
+        }
+        val milestones = WordProgressCalculator.calculate(Catalog.words, attempts)
+        val saved = dao.achievements(profileId)
+        StageCatalog.stages.forEach { stage ->
+            val complete = WordProgressCalculator.summarize(stage.id, milestones).collectionComplete
+            val existing = saved.any { it.stageId == stage.id && it.catalogueVersion == CATALOGUE_VERSION }
+            if (complete && !existing) dao.putAchievement(StageAchievementEntity(profileId, stage.id, CATALOGUE_VERSION, System.currentTimeMillis()))
+            if (!complete && existing) dao.removeAchievement(profileId, stage.id, CATALOGUE_VERSION)
+        }
     }
 
     suspend fun saveSettings(value: AppSettings) {
@@ -80,7 +104,7 @@ class ReadingRepository(private val db: ReadingDatabase) {
             profileId = profileId,
             startedAt = System.currentTimeMillis(),
             config = ConfigCodec.encode(sessionConfig),
-            contentVersion = 2,
+            contentVersion = if (sessionConfig.selectedSubskills == null) 2 else CATALOGUE_VERSION + 2,
         )
         val id = dao.insertSession(session)
         val next = nextCard(session.copy(id = id), sessionConfig)
@@ -99,6 +123,7 @@ class ReadingRepository(private val db: ReadingDatabase) {
         ))
         val next = nextCard(session, ConfigCodec.decode(session.config))
         dao.updateSession(session.copy(currentCardId = next, remainingBag = "", lastAttemptId = attemptId))
+        syncAchievements(session.profileId)
         true
     }
 
@@ -108,6 +133,7 @@ class ReadingRepository(private val db: ReadingDatabase) {
         if (attempt.voidedAt != null) return@withTransaction false
         dao.updateAttempt(attempt.copy(voidedAt = System.currentTimeMillis()))
         dao.updateSession(session.copy(currentCardId = attempt.cardId, remainingBag = "", lastAttemptId = null))
+        syncAchievements(session.profileId)
         true
     }
 
@@ -120,7 +146,8 @@ class ReadingRepository(private val db: ReadingDatabase) {
         val recent = dao.recentPresentedWords(session.profileId, 5)
         val missed = history.distinctBy { it.word }.filterNot { it.success }.map { it.word }.toSet()
         val item = when (config.mode) {
-            PracticeMode.WORDS -> Selector.choose(config, recent, missed, Random.Default).let {
+            PracticeMode.WORDS -> Selector.choose(config, recent, missed, Random.Default,
+                if (config.selectedSubskills == null) emptyList() else dao.presentedWords(session.profileId)).let {
                 Triple(it.text, it.category.name, it.patterns)
             }
             PracticeMode.SENTENCES -> SentenceSelector.choose(config, dao.presentedSentences(session.profileId), missed, Random.Default).let {
@@ -130,7 +157,7 @@ class ReadingRepository(private val db: ReadingDatabase) {
         return dao.insertCard(CardEntity(
             sessionId = session.id, word = item.first, category = item.second,
             patterns = item.third.sorted().joinToString(","), shownAt = System.currentTimeMillis(),
-            contentVersion = 2,
+            contentVersion = session.contentVersion,
         ))
     }
 }

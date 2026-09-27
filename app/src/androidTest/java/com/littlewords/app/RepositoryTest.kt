@@ -13,6 +13,7 @@ import com.littlewords.app.domain.PracticeConfig
 import com.littlewords.app.domain.PracticeMode
 import com.littlewords.app.domain.SENTENCE_CATEGORY
 import com.littlewords.app.domain.SentenceSelector
+import com.littlewords.app.domain.StageCatalog
 
 @RunWith(AndroidJUnit4::class)
 class RepositoryTest {
@@ -61,6 +62,36 @@ class RepositoryTest {
         assertEquals(1, repo.history.first().size)
         assertTrue(repo.history.first().single().success)
         assertEquals(AppSettings(), repo.settings.first())
+    }
+
+    @Test fun stageChoicesBelongToEachProfileAndDoNotChangeALegacySession() = runBlocking {
+        repo.startSession()
+        val legacySnapshot = repo.activeSession.first()!!.config
+        val sh = StageCatalog.saveChoices(repo.settings.first().config, setOf("digraphs:sh"))
+        repo.saveSettings(AppSettings(config = sh))
+        assertEquals(legacySnapshot, repo.activeSession.first()!!.config)
+        val second = repo.createProfile("Second")
+        val cvc = StageCatalog.saveChoices(repo.settings.first().config, setOf("cvc:short_a"))
+        repo.saveSettings(AppSettings(config = cvc))
+        db.close()
+        db = ReadingDatabase.open(context, databaseName)
+        repo = ReadingRepository(db)
+        assertEquals(setOf("cvc:short_a"), repo.settings.first().config.selectedSubskills)
+        repo.selectProfile(1)
+        assertEquals(setOf("digraphs:sh"), repo.settings.first().config.selectedSubskills)
+        assertEquals(legacySnapshot, repo.activeSession.first()!!.config)
+        repo.selectProfile(second)
+        assertEquals(setOf("cvc:short_a"), repo.settings.first().config.selectedSubskills)
+    }
+
+    @Test fun invalidStageSaveKeepsTheLastSavedConfiguration() = runBlocking {
+        val valid = StageCatalog.saveChoices(repo.settings.first().config, setOf("digraphs:sh"))
+        repo.saveSettings(AppSettings(config = valid))
+        try {
+            repo.saveSettings(AppSettings(config = valid.copy(selectedSubskills = emptySet())))
+            fail("Empty stage choices should be rejected")
+        } catch (_: IllegalArgumentException) { }
+        assertEquals(setOf("digraphs:sh"), repo.settings.first().config.selectedSubskills)
     }
 
     @Test fun duplicateProfileNamesAreRejectedIgnoringCase() = runBlocking {

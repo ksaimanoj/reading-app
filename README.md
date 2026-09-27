@@ -5,15 +5,19 @@ Little Words is a private, offline Android app for parent-guided reading practic
 ## Using the app
 
 1. Tap the profile name on the home screen to switch children or add a **Testing** profile. Existing data from an earlier version appears under **Gagan**.
-2. Open **Settings** and choose the sounds and letters your child knows.
-3. Turn the five word groups on or off. The app mixes all eligible words from the enabled groups automatically.
+2. Open **Progress → Learning stages** to see this child's unique-word milestones. Expand a stage to see its skills and word lists. A word becomes confident after independent reads in two different sessions; a later Needs practice score marks it for review without removing confidence.
+3. Include the stages and skills you want, then tap **Save choices**. You can mix earlier review with new content. Changes affect the next session; an active session keeps its saved choices. Existing profiles continue using their custom length and sound filters until you save stage choices.
 4. Choose **System**, **Light**, or **Dark** appearance.
 5. Tap **Start reading** for individual words, or **Try short sentences** for sentence practice.
 6. Swipe right for **Read independently**. Swipe left for **Needs practice**.
 7. Tap **Pause** to undo the latest swipe, save your place, or end the session.
-8. Open **Progress** for session history. Tap a session to see every completed word or sentence, its outcome, and its reading time.
+8. Open **Progress → History** for session history. Tap a session to see every completed word or sentence, its outcome, and its reading time.
 
 Sounding out and then blending the whole word or sentence counts as an independent read. If the parent supplies a sound or the answer, use Needs practice. Silly words are deliberately unfamiliar and are marked on screen by default. Sentence practice uses only sentences whose letters and sound-pattern tags are currently enabled. Every eligible sentence appears before the app repeats one, including across sessions. Within later passes, less-seen sentences come first.
+
+Learning-stage totals count the bundled real-word collection, not every English word or the currently enabled practice pool. Each real word belongs to exactly one stage and skill. The initial stages are short-vowel CVC words, digraphs and doubled consonants, and blends. Two-letter, tricky, and two-syllable words are in Additional practice. Silly words are separate and do not count toward real-word milestones. Detailed stage progress is a record of parent observations, not a reading-level assessment. The app does not automatically unlock or disable stages. More advanced vowel stages await reviewed content.
+
+**Settings** keeps appearance, scoring-button, and silly-word display preferences. After saving stage choices, open **Advanced options** there to restrict letters or sound patterns. The stage counts stay fixed; each expanded skill shows how many of its words remain available under those restrictions. If a later release adds real words, increase `CATALOGUE_VERSION` in `LearningStages.kt` so completion records for the earlier collection remain visible.
 
 Reading time starts when a card is visible and ends when it is scored. Pauses and time in the background are excluded. The time is stored with each new attempt; older attempts show **time not recorded**. If Android terminates the app mid-card, timing restarts when the card is shown again.
 
@@ -33,7 +37,7 @@ Settings and reading history survive a normal APK upgrade when the new APK keeps
 
 ## Updating the bundled reading content
 
-The editable sources of truth are `content/words.csv` and `content/sentences.csv`. Word rows contain the word, its group, sound-pattern tags, and an optional review note. Sentence rows contain two to six real words from the reviewed word catalogue, their exact combined sound-pattern tags, and a required content-review note. The compiler rejects unknown or silly words inside sentences and rejects incomplete pattern tagging.
+The editable sources of truth are `content/words.csv` and `content/sentences.csv`. Word rows contain the word, its length group, sound-pattern tags, an optional review note, and explicit primary stage and subskill. The compiler validates membership and produces stage counts in `content/catalog-report.md`. Sentence rows contain two to six real words from the reviewed word catalogue, their exact combined sound-pattern tags, and a required content-review note. The compiler rejects unknown or silly words inside sentences and rejects incomplete pattern tagging.
 
 Android builds use the checked-in generated `CatalogData.kt` and `SentenceCatalogData.kt`, so building the APK does not require Python or internet access.
 

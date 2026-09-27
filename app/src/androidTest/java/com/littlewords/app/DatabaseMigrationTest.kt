@@ -46,6 +46,7 @@ class DatabaseMigrationTest {
             assertNull(history.single().durationMs)
             assertEquals(1, upgraded.dao().observeSessions(1).first().size)
             assertEquals("Gagan", upgraded.dao().observeProfiles().first().single().name)
+            assertEquals(emptyList<com.littlewords.app.data.StageAchievementEntity>(), upgraded.dao().achievements(1))
         } finally {
             upgraded.close()
             context.deleteDatabase(name)

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 
-HEADERS = ("word", "category", "patterns", "note")
+HEADERS = ("word", "category", "patterns", "note", "stage", "subskill")
 SENTENCE_HEADERS = ("sentence", "patterns", "note")
 CATEGORY_LENGTHS = {
     "TWO_REAL": 2,
@@ -40,6 +40,14 @@ PATTERNS = (
 )
 PATTERN_ORDER = {name: index for index, name in enumerate(PATTERNS)}
 SHORT_VOWELS = frozenset(PATTERNS[:5])
+STAGE_SUBSKILLS = {
+    "cvc": frozenset(SHORT_VOWELS),
+    "digraphs": frozenset({"sh", "ch", "th", "ck", "double", "combined"}),
+    "blends": frozenset({"plain", "combined"}),
+    "additional": frozenset({"two_letter", "tricky", "two_syllables"}),
+    "silly": frozenset({"silly"}),
+}
+COMPLEX_PATTERNS = frozenset({"sh", "ch", "th", "ck", "double"})
 SILLY_EXCLUSIONS = frozenset({
     "ass", "bra", "bum", "cum", "fag", "fuk", "gay", "god", "hoe",
     "jap", "jew", "jiz", "jus", "kik", "nig", "sex", "tit", "vag", "veg",
@@ -54,6 +62,8 @@ class Row:
     category: str
     patterns: tuple[str, ...]
     note: str = ""
+    stage: str = ""
+    subskill: str = ""
 
 
 @dataclass(frozen=True)
@@ -77,6 +87,8 @@ def parse_csv(path: Path) -> list[Row]:
                 category=(raw["category"] or "").strip(),
                 patterns=tuple(part.strip() for part in (raw["patterns"] or "").split("|") if part.strip()),
                 note=(raw["note"] or "").strip(),
+                stage=(raw["stage"] or "").strip(),
+                subskill=(raw["subskill"] or "").strip(),
             ))
         return rows
 
@@ -97,7 +109,8 @@ def parse_sentence_csv(path: Path) -> list[SentenceRow]:
         return rows
 
 
-def validate(rows: Sequence[Row], minimum_size: int = 707, require_coverage: bool = True) -> list[str]:
+def validate(rows: Sequence[Row], minimum_size: int = 707, require_coverage: bool = True,
+             require_stage_membership: bool = False) -> list[str]:
     errors: list[str] = []
     occurrences: dict[str, list[int]] = {}
     for item in rows:
@@ -131,6 +144,12 @@ def validate(rows: Sequence[Row], minimum_size: int = 707, require_coverage: boo
             errors.append(f"{prefix} tricky words require a review note")
         if item.category == "THREE_SILLY" and item.word in SILLY_EXCLUSIONS:
             errors.append(f"{prefix} word is on the silly-word exclusion list")
+        if require_stage_membership:
+            expected = reviewed_membership(item)
+            if expected is None or item.stage != expected[0]:
+                errors.append(f"{prefix} invalid primary stage '{item.stage}' for {item.word}; expected {expected}")
+            elif item.subskill != expected[1]:
+                errors.append(f"{prefix} invalid primary subskill '{item.subskill}' for {item.word}; expected {expected[1]}")
         for digraph in ("sh", "ch", "th"):
             if digraph in item.patterns and digraph not in item.word:
                 errors.append(f"{prefix} pattern '{digraph}' does not contain '{digraph}' in the word")
@@ -152,6 +171,29 @@ def validate(rows: Sequence[Row], minimum_size: int = 707, require_coverage: boo
         errors.extend(f"catalogue is missing category {name}" for name in CATEGORY_LENGTHS if name not in categories)
         errors.extend(f"catalogue is missing pattern {name}" for name in PATTERNS if name not in patterns)
     return errors
+
+
+def reviewed_membership(item: Row) -> tuple[str, str] | None:
+    """Check explicit assignments against the reviewed structural taxonomy."""
+    patterns = set(item.patterns)
+    if item.category == "THREE_SILLY":
+        return "silly", "silly"
+    if "two_syllables" in patterns:
+        return "additional", "two_syllables"
+    if "tricky" in patterns:
+        return "additional", "tricky"
+    if item.category == "TWO_REAL":
+        return "additional", "two_letter"
+    if "blends" in patterns:
+        return "blends", "combined" if patterns & COMPLEX_PATTERNS else "plain"
+    complex_patterns = patterns & COMPLEX_PATTERNS
+    if complex_patterns:
+        return "digraphs", next(iter(complex_patterns)) if len(complex_patterns) == 1 else "combined"
+    vowel = next(iter(patterns & SHORT_VOWELS), None)
+    if (item.category == "THREE_REAL" and len(patterns) == 1 and vowel
+            and re.fullmatch(r"[^aeiou][aeiou][^aeiou]", item.word)):
+        return "cvc", vowel
+    return None
 
 
 def validate_sentences(
@@ -213,7 +255,7 @@ def render_kotlin(rows: Sequence[Row]) -> str:
         patterns = sorted(item.patterns, key=lambda value: PATTERN_ORDER.get(value, 999))
         rendered_patterns = ", ".join(f'\"{value}\"' for value in patterns)
         lines.append(
-            f'        Word("{item.word}", Category.{item.category}, setOf({rendered_patterns})),',
+            f'        Word("{item.word}", Category.{item.category}, setOf({rendered_patterns}), "{item.stage}", "{item.subskill}"),',
         )
     lines.extend(("    )", "}", ""))
     return "\n".join(lines)
@@ -238,6 +280,7 @@ def render_sentence_kotlin(rows: Sequence[SentenceRow]) -> str:
 def render_report(rows: Sequence[Row]) -> str:
     category_counts = Counter(item.category for item in rows)
     pattern_counts = Counter(pattern for item in rows for pattern in item.patterns)
+    stage_counts = Counter((item.stage, item.subskill) for item in rows)
     lines = [
         "# Generated catalogue report",
         "",
@@ -251,6 +294,8 @@ def render_report(rows: Sequence[Row]) -> str:
     lines.extend(f"| `{name}` | {category_counts[name]} |" for name in CATEGORY_LENGTHS)
     lines.extend(("", "## Patterns", "", "| Pattern | Count |", "| --- | ---: |"))
     lines.extend(f"| `{name}` | {pattern_counts[name]} |" for name in PATTERNS)
+    lines.extend(("", "## Primary stage and subskill membership", "", "Each entry belongs to one counting group. Silly words are excluded from real-word milestones.", "", "| Stage | Subskill | Count |", "| --- | --- | ---: |"))
+    lines.extend(f"| `{stage}` | `{subskill}` | {stage_counts[stage, subskill]} |" for stage, subskills in STAGE_SUBSKILLS.items() for subskill in sorted(subskills) if stage_counts[stage, subskill])
     lines.extend((
         "",
         "## Silly-word safety exclusions",
@@ -308,7 +353,8 @@ def compile_files(
     require_coverage: bool = True,
 ) -> bool:
     rows = parse_csv(source)
-    errors = validate(rows, minimum_size=minimum_size, require_coverage=require_coverage)
+    errors = validate(rows, minimum_size=minimum_size, require_coverage=require_coverage,
+                      require_stage_membership=minimum_size >= 707)
     if errors:
         raise ValueError("\n".join(errors))
     expected = {
@@ -362,7 +408,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         word_rows = parse_csv(root / "content" / "words.csv")
         sentence_rows = parse_sentence_csv(root / "content" / "sentences.csv")
-        preflight_errors = validate(word_rows, minimum_size=args.minimum_size)
+        preflight_errors = validate(word_rows, minimum_size=args.minimum_size,
+                                    require_stage_membership=True)
         preflight_errors.extend(validate_sentences(sentence_rows, word_rows))
         if preflight_errors:
             raise ValueError("\n".join(preflight_errors))

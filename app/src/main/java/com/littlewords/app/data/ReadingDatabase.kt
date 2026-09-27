@@ -44,6 +44,14 @@ interface ReadingDao {
     """)
     suspend fun recentPresentedWords(profileId: Long, limit: Int): List<String>
     @Query("""
+        SELECT cards.word FROM cards INNER JOIN sessions ON cards.sessionId = sessions.id
+        WHERE sessions.profileId = :profileId AND cards.category != 'SENTENCE'
+          AND (NOT EXISTS (SELECT 1 FROM attempts WHERE attempts.cardId = cards.id)
+            OR EXISTS (SELECT 1 FROM attempts WHERE attempts.cardId = cards.id AND attempts.voidedAt IS NULL))
+        ORDER BY cards.id DESC
+    """)
+    suspend fun presentedWords(profileId: Long): List<String>
+    @Query("""
         SELECT cards.word FROM cards
         INNER JOIN sessions ON cards.sessionId = sessions.id
         WHERE sessions.profileId = :profileId AND cards.category = 'SENTENCE'
@@ -52,9 +60,16 @@ interface ReadingDao {
         ORDER BY cards.id DESC
     """)
     suspend fun presentedSentences(profileId: Long): List<String>
+    @Query("SELECT * FROM stage_achievements WHERE profileId = :profileId ORDER BY catalogueVersion")
+    fun observeAchievements(profileId: Long): Flow<List<StageAchievementEntity>>
+    @Query("SELECT * FROM stage_achievements WHERE profileId = :profileId ORDER BY catalogueVersion")
+    suspend fun achievements(profileId: Long): List<StageAchievementEntity>
+    @Upsert suspend fun putAchievement(value: StageAchievementEntity)
+    @Query("DELETE FROM stage_achievements WHERE profileId = :profileId AND stageId = :stageId AND catalogueVersion = :version")
+    suspend fun removeAchievement(profileId: Long, stageId: String, version: Int)
 }
 
-@Database(entities = [ProfileEntity::class, ActiveProfileEntity::class, SettingsEntity::class, SessionEntity::class, CardEntity::class, AttemptEntity::class], version = 3, exportSchema = true)
+@Database(entities = [ProfileEntity::class, ActiveProfileEntity::class, SettingsEntity::class, SessionEntity::class, CardEntity::class, AttemptEntity::class, StageAchievementEntity::class], version = 4, exportSchema = true)
 abstract class ReadingDatabase : RoomDatabase() {
     abstract fun dao(): ReadingDao
     companion object {
@@ -78,10 +93,15 @@ abstract class ReadingDatabase : RoomDatabase() {
                 db.execSQL("DROP INDEX IF EXISTS one_active_session")
             }
         }
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS stage_achievements (profileId INTEGER NOT NULL, stageId TEXT NOT NULL, catalogueVersion INTEGER NOT NULL, earnedAt INTEGER NOT NULL, PRIMARY KEY(profileId, stageId, catalogueVersion))")
+            }
+        }
 
         fun open(context: Context, name: String = "little-words.db"): ReadingDatabase =
             Room.databaseBuilder(context.applicationContext, ReadingDatabase::class.java, name)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         db.execSQL("INSERT INTO profiles (id, name) VALUES (1, 'Gagan')")

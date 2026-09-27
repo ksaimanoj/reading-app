@@ -9,9 +9,13 @@ object SentenceSelector {
         }
     }
 
-    fun eligible(config: PracticeConfig): List<Sentence> = Catalog.sentences.filter { sentence ->
+    fun eligible(config: PracticeConfig): List<Sentence> {
+        val supported = config.selectedSubskills?.let(StageCatalog::supportedPatterns)
+        return Catalog.sentences.filter { sentence ->
         sentence.patterns.all { it in config.patterns } &&
+            (supported == null || sentence.patterns.all { it in supported }) &&
             sentence.text.asSequence().filter { it.isLetter() }.all { it in config.letters }
+        }
     }
 
     fun choose(

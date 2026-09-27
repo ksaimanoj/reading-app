@@ -19,6 +19,8 @@ data class Word(
     val text: String,
     val category: Category,
     val patterns: Set<String>,
+    val stageId: String = "",
+    val subskillId: String = "",
 )
 
 data class Sentence(
@@ -41,4 +43,7 @@ data class PracticeConfig(
         "short_u",
     ),
     val mode: PracticeMode = PracticeMode.WORDS,
+    /** Null keeps pre-stage settings and in-progress sessions on their original selection rules. */
+    val selectedSubskills: Set<String>? = null,
+    val catalogueVersion: Int = 1,
 )

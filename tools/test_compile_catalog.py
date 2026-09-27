@@ -26,6 +26,19 @@ def sentence_row(sentence, patterns, note="reviewed", line=2):
 
 
 class CatalogueCompilerTest(unittest.TestCase):
+    def test_stage_membership_requires_explicit_reviewed_group(self):
+        item = row("cat", "THREE_REAL", "short_a")
+        self.assertTrue(any("primary stage" in error for error in compiler.validate([item], minimum_size=0, require_coverage=False, require_stage_membership=True)))
+
+    def test_stage_membership_rejects_misclassified_examples(self):
+        items = [
+            compiler.Row(2, "ship", "FOUR_REAL", ("short_i", "sh"), "", "cvc", "short_i"),
+            compiler.Row(3, "brush", "FIVE_REAL", ("short_u", "blends", "sh"), "", "blends", "plain"),
+        ]
+        errors = compiler.validate(items, minimum_size=0, require_coverage=False, require_stage_membership=True)
+        self.assertTrue(any("row 2" in error and "primary stage" in error for error in errors))
+        self.assertTrue(any("row 3" in error and "primary subskill" in error for error in errors))
+
     def test_duplicate_word_names_both_rows(self):
         rows = [
             row("cat", "THREE_REAL", "short_a", line=2),

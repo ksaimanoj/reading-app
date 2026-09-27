@@ -50,4 +50,10 @@ class ConfigCodecTest {
         assertFalse("weights" in encoded)
         assertTrue("SENTENCES" in encoded)
     }
+
+    @Test fun stageChoicesRoundTripWithoutChangingLegacySelection() {
+        val stage = PracticeConfig(selectedSubskills = setOf("digraphs:sh"))
+        assertEquals(stage, ConfigCodec.decode(ConfigCodec.encode(stage)))
+        assertEquals(null, ConfigCodec.decode("""{"weights":[10,70,20,0,0],"letters":"abc","patterns":["short_a"]}""").selectedSubskills)
+    }
 }

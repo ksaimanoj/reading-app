@@ -1,0 +1,94 @@
+package com.littlewords.app.domain
+
+import kotlin.random.Random
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class LearningStagesTest {
+    @Test fun catalogueHasOnePrimaryMembershipPerRealWord() {
+        val real = Catalog.words.filter { it.category != Category.THREE_SILLY }
+        assertEquals(475, real.size)
+        assertEquals(475, real.map { it.text }.toSet().size)
+        assertTrue(real.all { StageCatalog.contains(it.stageId, it.subskillId) })
+        assertEquals("cvc", real.first { it.text == "cat" }.stageId)
+        assertEquals("sh", real.first { it.text == "ship" }.subskillId)
+        assertEquals("combined", real.first { it.text == "brush" }.subskillId)
+        val emptyProgress = WordProgressCalculator.calculate(Catalog.words, emptyList())
+        StageCatalog.stages.forEach { stage ->
+            val summary = WordProgressCalculator.summarize(stage.id, emptyProgress)
+            assertEquals(summary.total, summary.confident + summary.practising + summary.notTried)
+        }
+    }
+
+    @Test fun confidenceNeedsTwoDistinctSuccessfulSessionsAndReviewUsesLatestValidAttempt() {
+        val words = Catalog.words.filter { it.text == "cat" }
+        val attempts = listOf(
+            ProgressAttempt("cat", "THREE_REAL", 1, true, 1),
+            ProgressAttempt("cat", "THREE_REAL", 1, true, 2),
+            ProgressAttempt("cat", "THREE_REAL", 2, true, 3),
+            ProgressAttempt("cat", "THREE_REAL", 2, false, 4),
+            ProgressAttempt("cat.", SENTENCE_CATEGORY, 3, true, 5),
+        )
+        val beforeSecondSession = WordProgressCalculator.calculate(words, attempts.take(2))
+        assertEquals(WordStatus.PRACTISING, beforeSecondSession.getValue("cat").status)
+        val complete = WordProgressCalculator.calculate(words, attempts)
+        assertEquals(WordStatus.CONFIDENT, complete.getValue("cat").status)
+        assertTrue(complete.getValue("cat").needsReview)
+        val undone = WordProgressCalculator.calculate(words, attempts.filter { it.id != 3L })
+        assertEquals(WordStatus.PRACTISING, undone.getValue("cat").status)
+        assertFalse(undone.getValue("cat").needsReview)
+    }
+
+    @Test fun stageChoicesIgnoreOldLengthGroupsAndSeparateCombinedSkills() {
+        val config = PracticeConfig(
+            enabledCategories = setOf(Category.THREE_REAL),
+            patterns = Catalog.patternLabels.keys,
+            selectedSubskills = setOf("digraphs:sh"),
+        )
+        val eligible = Selector.eligible(config).map { it.text }.toSet()
+        assertTrue("ship" in eligible)
+        assertFalse("chat" in eligible)
+        assertFalse("brush" in eligible)
+    }
+
+    @Test fun stageSelectionGivesEveryEligibleWordAnOpportunityBeforeRepeating() {
+        val config = PracticeConfig(patterns = Catalog.patternLabels.keys, selectedSubskills = setOf("additional:two_letter"))
+        val pool = Selector.eligible(config)
+        val presented = mutableListOf<String>()
+        repeat(pool.size) {
+            val chosen = Selector.choose(config, presented.takeLast(5).reversed(), setOf("at"), Random(7), presented)
+            presented += chosen.text
+        }
+        assertEquals(pool.size, presented.toSet().size)
+    }
+
+    @Test fun stageDenominatorDoesNotShrinkWithAdvancedRestrictions() {
+        val full = PracticeConfig(patterns = Catalog.patternLabels.keys, selectedSubskills = setOf("digraphs:sh"))
+        val restricted = full.copy(letters = "ship")
+        assertTrue(Selector.eligible(restricted).size < Selector.eligible(full).size)
+        assertEquals(16, StageCatalog.words("digraphs", "sh").size)
+    }
+
+    @Test fun sentencePracticeMayUseSupportingCvcWordsWithoutEnablingTheCvcStage() {
+        val config = PracticeConfig(patterns = Catalog.patternLabels.keys, selectedSubskills = setOf("digraphs:sh"))
+        assertTrue(SentenceSelector.eligible(config).any { it.text == "dad can fish." })
+        assertFalse(SentenceSelector.eligible(config).any { "ch" in it.patterns })
+        assertTrue(SentenceSelector.eligible(config.copy(selectedSubskills = setOf(StageCatalog.SILLY_KEY))).isEmpty())
+    }
+
+    @Test fun unknownStageChoiceCannotBeSavedBesideAValidOne() {
+        val config = PracticeConfig(patterns = Catalog.patternLabels.keys,
+            selectedSubskills = setOf("digraphs:sh", "future:silent_e"))
+        assertTrue(Selector.validate(config).any { "unavailable" in it.lowercase() })
+    }
+
+    @Test fun stageCoverageRespectsRecentSpacingWhenAnotherWordIsAvailable() {
+        val config = PracticeConfig(patterns = Catalog.patternLabels.keys, selectedSubskills = setOf("additional:two_letter"))
+        val other = Selector.eligible(config).map { it.text }.filterNot { it == "am" }
+        val presented = other + other + "am"
+        val chosen = Selector.choose(config, listOf("am"), emptySet(), Random(5), presented)
+        assertFalse(chosen.text == "am")
+    }
+}

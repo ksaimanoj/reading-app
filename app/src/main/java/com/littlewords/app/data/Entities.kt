@@ -34,6 +34,8 @@ object ConfigCodec {
         put("letters", config.letters)
         put("patterns", JSONArray(config.patterns.sorted()))
         put("mode", config.mode.name)
+        config.selectedSubskills?.let { put("selectedSubskills", JSONArray(it.sorted())) }
+        put("catalogueVersion", config.catalogueVersion)
     }.toString()
 
     fun decode(value: String): PracticeConfig = JSONObject(value).let { json ->
@@ -51,6 +53,10 @@ object ConfigCodec {
             letters = json.getString("letters"),
             patterns = (0 until patterns.length()).map { patterns.getString(it) }.toSet(),
             mode = if (json.has("mode")) PracticeMode.valueOf(json.getString("mode")) else PracticeMode.WORDS,
+            selectedSubskills = if (json.has("selectedSubskills")) json.getJSONArray("selectedSubskills").let { values ->
+                (0 until values.length()).map { values.getString(it) }.toSet()
+            } else null,
+            catalogueVersion = json.optInt("catalogueVersion", 1),
         )
     }
 }
@@ -123,4 +129,12 @@ data class HistoryItem(
     val respondedAt: Long,
     val voidedAt: Long?,
     val durationMs: Long?,
+)
+
+@Entity(tableName = "stage_achievements", primaryKeys = ["profileId", "stageId", "catalogueVersion"])
+data class StageAchievementEntity(
+    val profileId: Long,
+    val stageId: String,
+    val catalogueVersion: Int,
+    val earnedAt: Long,
 )

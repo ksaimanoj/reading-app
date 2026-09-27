@@ -80,10 +80,23 @@ class ReadingUiTest {
         compose.onNodeWithText("Pause").performClick()
         compose.onNodeWithText("Save & go home").performClick()
         compose.onNodeWithText("Progress").performClick()
+        compose.onNodeWithText("History").performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithTag("session_${history.sessionId}").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("session_${history.sessionId}").performClick()
         compose.onNodeWithTag("session_attempt_${history.attemptId}").assertExists()
         compose.onNodeWithText(history.word).assertExists()
+    }
+
+    @Test fun learningStagesAreDefaultAndSaveAProfileSpecificShChoice() {
+        compose.onNodeWithText("Progress").performClick()
+        compose.onNodeWithText("Learning stages").assertExists()
+        compose.onNodeWithText("Short-vowel CVC words").assertExists()
+        compose.onNodeWithTag("stage_digraphs_expand").performScrollTo().performClick()
+        compose.onNodeWithTag("skill_digraphs:sh").performScrollTo().performClick()
+        compose.onNodeWithText("Save choices").performClick()
+        compose.waitUntil(10000) {
+            runBlocking { repo.settings.first().config.selectedSubskills == setOf("digraphs:sh") }
+        }
     }
 
     @Test fun appearanceChoiceIsSaved() {

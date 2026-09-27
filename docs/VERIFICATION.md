@@ -1,5 +1,30 @@
 # Verification
 
+## Learning stages release 1.6 — 27 September 2026
+
+The app now has profile-specific learning stages. The 707-entry catalogue contains 475 real words assigned exactly once across short-vowel CVC (158), digraphs and doubled consonants (82), blends (172), and additional practice (63). The 232 silly words remain separate. The generated [`catalog-report.md`](../content/catalog-report.md) lists every primary subskill count.
+
+The implementation derives confidence from valid word attempts in two distinct sessions, marks a confident word for review after a later Needs practice score, and recalculates after undo. Stage selections are profile-scoped JSON settings; older settings and active-session snapshots keep their original length and sound rules. Room schema 4 adds only the versioned stage-achievement table. The 1-to-4 migration test preserved its recorded word, session, profile, and duration state.
+
+Verification run on the available Android 16 API 36.1 emulator:
+
+- 16 Python catalogue/compiler tests passed; generated files passed check-only validation.
+- 33 local Kotlin unit tests and 33 connected Android tests passed, including stage eligibility, coverage, profile isolation, stage controls, configuration compatibility, and migration.
+- Debug APK build and Android lint passed. Application ID remains `com.littlewords.app`; version code is 7 and version name is 1.6. The new APK's signing certificate matches the previous development APK.
+- The Learning stages screen was inspected in light and dark themes at 2400×1080 landscape. The home screen was inspected at 1280×720 and at 1.5× system text size; both reading actions remained fully visible after a compact-layout adjustment. The app still requests landscape orientation on phones. A portrait tablet window and a family-device upgrade were not checked in this run.
+
+Commands run:
+
+```sh
+python3 -m unittest discover -s tools -p 'test_*.py'
+python3 tools/compile_catalog.py --check
+./gradlew :app:testDebugUnitTest :app:connectedDebugAndroidTest :app:assembleDebug :app:lintDebug
+```
+
+The 1.6 debug APK is `deliverables/LittleWords-debug.apk`. Its SHA-256 is `243636471306309e73fd7f4fedd4e8b8fd2bd9d55a08c97a1c5666f033f118b4`.
+
+## Previous release 1.5
+
 Verified on 22 September 2026 with a dedicated Android 16 API 36.1 arm64 emulator. Version 1.4 was also installed over version 1.3 on the connected family phone; the app opened, its database reached schema version 3, and the user confirmed it worked. Version 1.5 was checked on the emulator only.
 
 ## Current catalogue

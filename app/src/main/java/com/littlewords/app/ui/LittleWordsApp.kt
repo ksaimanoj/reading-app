@@ -97,8 +97,11 @@ private fun Context.activity(): Activity? = when (this) {
                     onBack = { page = "home" })
                 "settings" -> SettingsScreen(state.settings, state.session != null, busy,
                     onTheme = model::theme,
-                    onSave = { model.saveSettings(it) { page = "home" } }, onBack = { page = "home" })
-                "progress" -> ProgressScreen(state, onBack = { page = "home" })
+                    onSave = { model.saveSettings(it) { page = "home" } },
+                    onLearningStages = { page = "progress" }, onBack = { page = "home" })
+                "progress" -> ProgressScreen(state, busy,
+                    onSaveChoices = { config -> model.saveSettings(state.settings.copy(config = config)) {} },
+                    onBack = { page = "home" })
                 "reading" -> state.card?.let { card ->
                     PracticeScreen(card, state.settings, busy || paused, onScore = { model.score(card.id, it) }, onPause = { paused = true })
                 } ?: Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }

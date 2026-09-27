@@ -22,14 +22,16 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun SettingsScreen(settings: AppSettings, hasSession: Boolean, busy: Boolean,
-    onTheme: (ThemeMode) -> Unit, onSave: (AppSettings) -> Unit, onBack: () -> Unit) {
+    onTheme: (ThemeMode) -> Unit, onSave: (AppSettings) -> Unit,
+    onLearningStages: () -> Unit, onBack: () -> Unit) {
     var enabledCategories by remember(settings.config) { mutableStateOf(settings.config.enabledCategories) }
     var patterns by remember(settings.config) { mutableStateOf(settings.config.patterns) }
     var letters by remember(settings.config) { mutableStateOf(settings.config.letters) }
     var showLetters by remember { mutableStateOf(false) }
+    var showAdvanced by remember { mutableStateOf(false) }
     var buttons by remember(settings.showButtons) { mutableStateOf(settings.showButtons) }
     var sillyMarker by remember(settings.showSillyMarker) { mutableStateOf(settings.showSillyMarker) }
-    val config = PracticeConfig(enabledCategories, letters, patterns, settings.config.mode)
+    val config = settings.config.copy(enabledCategories = enabledCategories, letters = letters, patterns = patterns)
     val errors = Selector.validate(config)
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
         PageHeader("Make it their own", onBack) {
@@ -46,9 +48,15 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
                 Text("Light, dark, or follow your device. Saved as soon as you choose.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (settings.config.selectedSubskills != null) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Practice content", style = MaterialTheme.typography.titleMedium)
+                Text("Choose stages and see word milestones for this child in Learning stages.")
+                TextButton(onClick = onLearningStages) { Text("Open Learning stages") }
+            }
+            if (settings.config.selectedSubskills == null) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Word groups", style = MaterialTheme.typography.titleMedium)
-                Text("Choose the kinds of words to practise. The app mixes all available words automatically.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Current custom selection. You can switch to Learning stages from Progress.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onLearningStages) { Text("Open Learning stages") }
                 Category.entries.forEach { category ->
                     val count = Selector.eligible(config, category).size
                     SettingSwitch(
@@ -61,8 +69,11 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
                     }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Sounds they know", style = MaterialTheme.typography.titleMedium)
+            if (settings.config.selectedSubskills != null) TextButton(onClick = { showAdvanced = !showAdvanced }) {
+                Text(if (showAdvanced) "Hide advanced options" else "Advanced options")
+            }
+            if (settings.config.selectedSubskills == null || showAdvanced) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Sound restrictions", style = MaterialTheme.typography.titleMedium)
                 Text("Only words using these sounds and patterns will appear.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Catalog.patternLabels.forEach { (key, label) -> FilterChip(selected = key in patterns,
@@ -70,7 +81,8 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
                 }
                 val sentenceCount = SentenceSelector.eligible(config).size
                 Text(
-                    "$sentenceCount reviewed short sentences available with these sounds.",
+                    if (sentenceCount == 0) "No reviewed sentences are available with these sounds and letters. Adjust the restrictions to restore sentence practice."
+                    else "$sentenceCount reviewed short sentences available with these sounds.",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (sentenceCount == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 )
@@ -83,6 +95,13 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
                             label = { Text(letter.toString()) }) }
                     }
                 }
+            }
+            if (settings.config.selectedSubskills != null && !showAdvanced) {
+                val sentenceCount = SentenceSelector.eligible(config).size
+                Text(if (sentenceCount == 0) "No reviewed sentences are available with the current choices. Adjust advanced restrictions or stage choices."
+                    else "$sentenceCount reviewed short sentences available with the current choices.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (sentenceCount == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
             }
             if (errors.isNotEmpty()) SoftPanel(Modifier.fillMaxWidth()) {
                 Text("Adjust the word choices before saving", style = MaterialTheme.typography.titleMedium)

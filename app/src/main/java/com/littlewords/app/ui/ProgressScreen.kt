@@ -14,13 +14,25 @@ import com.littlewords.app.data.ConfigCodec
 import com.littlewords.app.data.HistoryItem
 import com.littlewords.app.data.SessionEntity
 import com.littlewords.app.domain.PracticeMode
+import com.littlewords.app.domain.PracticeConfig
 import androidx.compose.ui.platform.testTag
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun ProgressScreen(state: ReadingState, onBack: () -> Unit) {
+@Composable fun ProgressScreen(state: ReadingState, busy: Boolean,
+    onSaveChoices: (PracticeConfig) -> Unit, onBack: () -> Unit) {
+    var tab by rememberSaveable(state.profileId) { mutableIntStateOf(0) }
+    var expandedStageId by rememberSaveable(state.profileId) { mutableStateOf<String?>(null) }
+    val stageScroll = rememberScrollState()
+    val historyScroll = rememberScrollState()
+    if (tab == 0) {
+        LearningStagesScreen(state, busy, onSaveChoices, expandedStageId,
+            onExpandedStageChange = { expandedStageId = it }, stageScroll,
+            onHistory = { tab = 1 }, onBack = onBack)
+        return
+    }
     var filter by remember { mutableStateOf("All") }
     var expandedSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
     val valid = state.validHistory
@@ -34,7 +46,12 @@ import java.util.Locale
     val revisit = selected.distinctBy { it.word }.filterNot { it.success }
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
         PageHeader("Every little step", onBack)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Text(state.profileName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 8.dp))
+        PrimaryTabRow(selectedTabIndex = 1) {
+            Tab(selected = false, onClick = { tab = 0 }, text = { Text("Learning stages") })
+            Tab(selected = true, onClick = {}, text = { Text("History") })
+        }
+        Column(Modifier.weight(1f).verticalScroll(historyScroll).padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text("A quiet record for you", style = MaterialTheme.typography.headlineLarge)
             Text("These are your observations, not a test score. Look for confidence growing across sessions.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

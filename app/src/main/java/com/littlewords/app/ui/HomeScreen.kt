@@ -1,6 +1,7 @@
 package com.littlewords.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,12 +10,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.littlewords.app.domain.PracticeMode
 import com.littlewords.app.domain.SENTENCE_CATEGORY
+import com.littlewords.app.domain.StageCatalog
 
 @Composable fun HomeScreen(state: ReadingState, busy: Boolean, onStart: (PracticeMode) -> Unit, onSettings: () -> Unit, onProgress: () -> Unit, onProfiles: () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
@@ -23,15 +28,22 @@ import com.littlewords.app.domain.SENTENCE_CATEGORY
         Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 28.dp else 20.dp, vertical = 8.dp)) {
             HomeHeader(state.profileName, wide, onProfiles, onProgress, onSettings)
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                if (wide) {
-                    Row(Modifier.fillMaxWidth().widthIn(max = 960.dp), horizontalArrangement = Arrangement.spacedBy(32.dp), verticalAlignment = Alignment.CenterVertically) {
-                        HomeTitle(compact, Modifier.weight(1f))
-                        HomeActions(state, busy, compact, onStart, Modifier.weight(1f))
+                if (wide || compact) {
+                    Row(Modifier.fillMaxWidth().widthIn(max = 960.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 32.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        if (compact) Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HomeTitle(true, Modifier.fillMaxWidth())
+                            Text("${stageMessage(state)} · View stages", Modifier.clickable(onClick = onProgress),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+                                maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        } else HomeTitle(false, Modifier.weight(1f))
+                        HomeActions(state, busy, compact, onStart, onProgress, Modifier.weight(1f))
                     }
                 } else {
                     Column(Modifier.fillMaxWidth().widthIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 24.dp)) {
                         HomeTitle(compact, Modifier.fillMaxWidth())
-                        HomeActions(state, busy, compact, onStart, Modifier.fillMaxWidth())
+                        HomeActions(state, busy, compact, onStart, onProgress, Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -71,28 +83,52 @@ import com.littlewords.app.domain.SENTENCE_CATEGORY
     )
 }
 
-@Composable private fun HomeActions(state: ReadingState, busy: Boolean, compact: Boolean, onStart: (PracticeMode) -> Unit, modifier: Modifier) {
+@Composable private fun HomeActions(state: ReadingState, busy: Boolean, compact: Boolean,
+    onStart: (PracticeMode) -> Unit, onProgress: () -> Unit, modifier: Modifier) {
     val activeSession = state.session != null
     val sentenceSession = state.card?.category == SENTENCE_CATEGORY
     val practiced = state.validHistory.count { it.sessionId == state.session?.id }
     val mode = if (sentenceSession) PracticeMode.SENTENCES else PracticeMode.WORDS
+    val largeText = LocalDensity.current.fontScale > 1.2f
     Column(
         modifier.clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(if (compact) 16.dp else 20.dp),
-        verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp),
+            .padding(if (compact) 12.dp else 20.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 12.dp),
     ) {
+        if (!compact) {
+            if (state.settings.config.selectedSubskills != null) Text(stageMessage(state), style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = onProgress) { Text("View Learning stages") }
+        }
         if (activeSession) {
             Text("$practiced ${if (sentenceSession) "sentences" else "words"} completed", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = { onStart(mode) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 48.dp else 54.dp)) {
+            Button(onClick = { onStart(mode) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp)) {
                 Text("Resume reading", fontSize = 17.sp)
             }
         } else {
-            Button(onClick = { onStart(PracticeMode.WORDS) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 48.dp else 54.dp)) {
+            Button(onClick = { onStart(PracticeMode.WORDS) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp)) {
                 Text("Start reading", fontSize = 17.sp)
             }
-            OutlinedButton(onClick = { onStart(PracticeMode.SENTENCES) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 48.dp else 54.dp)) {
-                Text("Try short sentences", fontSize = 17.sp)
+            OutlinedButton(onClick = { onStart(PracticeMode.SENTENCES) }, enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp)
+                    .semantics { contentDescription = "Try short sentences" }) {
+                Text(if (compact && largeText) "Sentences" else "Try short sentences", fontSize = if (compact) 13.sp else 17.sp,
+                    maxLines = 1)
             }
         }
+    }
+}
+
+private fun stageMessage(state: ReadingState): String {
+    val selected = state.settings.config.selectedSubskills ?: return "Set up Learning stages"
+    val stages = StageCatalog.stages.filter { stage ->
+        stage.subskills.any { StageCatalog.key(stage.id, it.id) in selected }
+    }
+    val next = stages.firstOrNull { stage -> state.stageSummaries[stage.id]?.collectionComplete != true }
+    val summary = next?.let { state.stageSummaries[it.id] }
+    return when {
+        stages.isEmpty() -> "Silly words included · choose a real-word stage when ready."
+        next == null -> "All included collections are ready for review."
+        else -> "${next.label} · ${summary?.confident ?: 0} of ${summary?.total ?: 0} confident" +
+            if (stages.size > 1) " · ${stages.size - 1} other groups included" else ""
     }
 }

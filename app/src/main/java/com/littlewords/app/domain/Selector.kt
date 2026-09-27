@@ -4,15 +4,24 @@ import kotlin.random.Random
 
 object Selector {
     fun validate(config: PracticeConfig): List<String> = buildList {
-        if (config.enabledCategories.isEmpty()) {
+        val known = StageCatalog.stages.flatMap { stage ->
+            stage.subskills.map { StageCatalog.key(stage.id, it.id) }
+        }.toSet() + StageCatalog.SILLY_KEY
+        if (config.selectedSubskills?.any { it !in known } == true) {
+            add("An unavailable practice group was selected. Choose from the current catalogue.")
+        }
+        if (config.selectedSubskills != null && config.selectedSubskills.isEmpty()) {
+            add("Include at least one practice group.")
+        } else if (config.selectedSubskills == null && config.enabledCategories.isEmpty()) {
             add("Enable at least one word group.")
         } else if (eligible(config).isEmpty()) {
-            add("The enabled word groups have no eligible words for the selected letters and patterns.")
+            add("The selected practice groups have no eligible words for the selected letters and patterns.")
         }
     }
 
     fun eligible(config: PracticeConfig): List<Word> = Catalog.words.filter { word ->
-        word.category in config.enabledCategories && matchesLettersAndPatterns(word, config)
+        (config.selectedSubskills?.let { StageCatalog.key(word.stageId, word.subskillId) in it }
+            ?: (word.category in config.enabledCategories)) && matchesLettersAndPatterns(word, config)
     }
 
     fun eligible(config: PracticeConfig, category: Category): List<Word> = Catalog.words.filter { word ->
@@ -24,6 +33,7 @@ object Selector {
         recent: List<String>,
         missed: Set<String>,
         random: Random,
+        presented: List<String> = emptyList(),
     ): Word {
         val pool = eligible(config)
         require(pool.isNotEmpty()) {
@@ -37,7 +47,12 @@ object Selector {
         } else {
             pool.filterNot { it.text == recent.firstOrNull() }.ifEmpty { pool }
         }
-        val reviewPool = spacedPool.filter { it.text in missed }.ifEmpty { spacedPool }
+        val coveragePool = if (config.selectedSubskills == null) spacedPool else {
+            val counts = presented.groupingBy { it }.eachCount()
+            val fewest = spacedPool.minOf { counts[it.text] ?: 0 }
+            spacedPool.filter { (counts[it.text] ?: 0) == fewest }
+        }
+        val reviewPool = coveragePool.filter { it.text in missed }.ifEmpty { coveragePool }
         return reviewPool[random.nextInt(reviewPool.size)]
     }
 

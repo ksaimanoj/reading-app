@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.littlewords.app.data.*
 import com.littlewords.app.domain.PracticeMode
+import com.littlewords.app.domain.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,6 +17,9 @@ data class ReadingState(
     val card: CardEntity? = null,
     val history: List<HistoryItem> = emptyList(),
     val sessions: List<SessionEntity> = emptyList(),
+    val achievements: List<StageAchievementEntity> = emptyList(),
+    val wordMilestones: Map<String, WordMilestone> = emptyMap(),
+    val stageSummaries: Map<String, StageProgress> = emptyMap(),
     val loaded: Boolean = false,
 ) {
     val validHistory get() = history.filter { it.voidedAt == null }
@@ -25,13 +29,24 @@ data class ReadingState(
 class ReadingViewModel(private val repository: ReadingRepository) : ViewModel() {
     private val readingTimer = ReadingTimer()
     val state = combine(repository.reading, repository.profiles) { reading, profiles ->
-        ReadingState(reading.profileId, profiles, reading.settings, reading.activeSession,
-            reading.currentCard, reading.history, reading.sessions, true)
+        val milestones = WordProgressCalculator.calculate(Catalog.words, reading.history.filter { it.voidedAt == null }.map {
+            ProgressAttempt(it.word, it.category, it.sessionId, it.success, it.attemptId)
+        })
+        ReadingState(profileId = reading.profileId, profiles = profiles, settings = reading.settings,
+            session = reading.activeSession, card = reading.currentCard, history = reading.history,
+            sessions = reading.sessions, achievements = reading.achievements, wordMilestones = milestones,
+            stageSummaries = StageCatalog.stages.associate { it.id to WordProgressCalculator.summarize(it.id, milestones) },
+            loaded = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReadingState())
     private val _busy = MutableStateFlow(false)
     val busy = _busy.asStateFlow()
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
+    init { viewModelScope.launch {
+        try { repository.syncAchievementsForAllProfiles() }
+        catch (cancel: CancellationException) { throw cancel }
+        catch (_: Exception) { _error.value = "Couldn't update learning milestones on this device. Please try again later." }
+    } }
     fun clearError() { _error.value = null }
     fun startTiming(cardId: Long) = readingTimer.start(cardId)
     fun stopTiming(cardId: Long) = readingTimer.stop(cardId)
@@ -43,7 +58,7 @@ class ReadingViewModel(private val repository: ReadingRepository) : ViewModel() 
             catch (cancel: CancellationException) { throw cancel }
             catch (failure: Exception) {
                 _error.value = if (failure is IllegalArgumentException) failure.message
-                    else "Couldn't save on this device. Your current reading card is unchanged. Please try again."
+                    else "Couldn't save on this device. Your saved choices and reading card are unchanged. Please try again."
             } finally { _busy.value = false }
         }
     }
