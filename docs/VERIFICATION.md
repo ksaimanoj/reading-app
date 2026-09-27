@@ -1,5 +1,14 @@
 # Verification
 
+## Database upgrade fix 1.7.1 — 27 September 2026
+
+The Redmi app crashed on launch after upgrading directly from 1.5 to 1.7. Room rejected the version-3 `sessions` table during the version-4 migration because the earlier app had created a partial `one_active_session_per_profile` index that Room's exported schema does not declare. The migration now drops both manually managed partial indices before Room validates the schema; the existing `onOpen` callback recreates them afterward.
+
+- A new version-3 migration test reproduced the phone's exception before the fix and passed afterward. Both migration tests passed on the Redmi.
+- Version 1.7.1 (code 9) was installed over 1.7 without clearing app data. The app launched and remained running.
+- The phone's database advanced from version 3 to 4. Before and after counts were identical: 2 profiles, 1 settings row, 7 sessions, 104 cards, and 97 attempts. SQLite's quick check returned `ok` for both copies.
+- Local unit tests, Android lint, and the debug APK build passed. The deliverable, build output, and project-level output APK share SHA-256 `cc185e482b795e32e99e4a2ff90207940885be1c074890048e93b2540507dcb0`.
+
 ## Progress bars release 1.7 — 27 September 2026
 
 Every learning stage and expanded skill now displays a rounded progress bar, whole-number percentage, and confident-word count out of that section's full real-word collection. The denominator remains stable when practice filters change. The bar exposes its progress and count to accessibility services. The updated skill layout was inspected on the Android 16 emulator; see [`screenshots/learning-stages-detail-light.png`](screenshots/learning-stages-detail-light.png).

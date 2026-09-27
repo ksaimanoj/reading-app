@@ -95,6 +95,10 @@ abstract class ReadingDatabase : RoomDatabase() {
         }
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // These partial indices are managed by onOpen, not by Room's
+                // exported schema. Remove them before Room validates the upgrade.
+                db.execSQL("DROP INDEX IF EXISTS one_active_attempt")
+                db.execSQL("DROP INDEX IF EXISTS one_active_session_per_profile")
                 db.execSQL("CREATE TABLE IF NOT EXISTS stage_achievements (profileId INTEGER NOT NULL, stageId TEXT NOT NULL, catalogueVersion INTEGER NOT NULL, earnedAt INTEGER NOT NULL, PRIMARY KEY(profileId, stageId, catalogueVersion))")
             }
         }
