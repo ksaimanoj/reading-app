@@ -50,9 +50,7 @@ import com.littlewords.app.domain.*
                     Text(stage.label, style = MaterialTheme.typography.titleLarge)
                     Text("For example: ${words.take(3).joinToString(", ") { it.text }}", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${summary.confident} of ${summary.total} words confident")
-                    LinearProgressIndicator(progress = { if (summary.total == 0) 0f else summary.confident.toFloat() / summary.total },
-                        modifier = Modifier.fillMaxWidth())
+                    LearningProgressBar(summary.confident, summary.total, Modifier.fillMaxWidth())
                     Text("${summary.practising} practising · ${summary.notTried} not tried" +
                         if (summary.needsReview > 0) " · ${summary.needsReview} needs review" else "")
                     val available = Selector.eligible(StageCatalog.saveChoices(base, keys)).size
@@ -83,7 +81,8 @@ import com.littlewords.app.domain.*
                             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column(Modifier.weight(1f)) {
                                     Text(skill.label, style = MaterialTheme.typography.titleMedium)
-                                    Text("$confident of ${skillWords.size} confident · $practising practising · ${skillWords.size - confident - practising} not tried" +
+                                    LearningProgressBar(confident, skillWords.size, Modifier.fillMaxWidth())
+                                    Text("$practising practising · ${skillWords.size - confident - practising} not tried" +
                                         if (review > 0) " · $review needs review" else "",
                                         style = MaterialTheme.typography.bodySmall)
                                     Text("For example: ${skillWords.take(3).joinToString(", ") { it.text }}",

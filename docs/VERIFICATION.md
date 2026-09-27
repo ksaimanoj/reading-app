@@ -1,5 +1,14 @@
 # Verification
 
+## Progress bars release 1.7 — 27 September 2026
+
+Every learning stage and expanded skill now displays a rounded progress bar, whole-number percentage, and confident-word count out of that section's full real-word collection. The denominator remains stable when practice filters change. The bar exposes its progress and count to accessibility services. The updated skill layout was inspected on the Android 16 emulator; see [`screenshots/learning-stages-detail-light.png`](screenshots/learning-stages-detail-light.png).
+
+- 16 Python catalogue/compiler tests and 33 local Kotlin unit tests passed; generated catalogue files are current.
+- 35 connected Android emulator tests passed, including new checks for 70% progress and the empty-collection case.
+- Debug APK build and Android lint passed. Application ID remains `com.littlewords.app`; version code is 8 and version name is 1.7. The signing certificate matches release 1.6.
+- The debug APK in `deliverables/LittleWords-debug.apk`, the build output, and the project-level `outputs` copy have the same SHA-256: `e92cfde5ab9162813f7a3525cf5643d973b1310c0dc539d245b1c75f20da4359`.
+
 ## Learning stages release 1.6 — 27 September 2026
 
 The app now has profile-specific learning stages. The 707-entry catalogue contains 475 real words assigned exactly once across short-vowel CVC (158), digraphs and doubled consonants (82), blends (172), and additional practice (63). The 232 silly words remain separate. The generated [`catalog-report.md`](../content/catalog-report.md) lists every primary subskill count.
