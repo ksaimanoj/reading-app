@@ -28,6 +28,12 @@ class ReadingUiTest {
     }
     @After fun cleanup() { db.close(); context.deleteDatabase(name) }
 
+    @Test fun homeShowsBothReadingChoicesWithoutScroll() {
+        compose.onNodeWithText("Start reading").assertIsDisplayed()
+        compose.onNodeWithText("Try short sentences").assertIsDisplayed()
+        assertTrue(compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isEmpty())
+    }
+
     @Test fun canCreateTestingProfileAndReturnToGagan() {
         compose.onNodeWithText("Gagan ▾").performClick()
         compose.onNodeWithText("Gagan · Current").assertExists()
