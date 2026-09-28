@@ -19,6 +19,7 @@ data class ReadingState(
     val sessions: List<SessionEntity> = emptyList(),
     val achievements: List<StageAchievementEntity> = emptyList(),
     val wordMilestones: Map<String, WordMilestone> = emptyMap(),
+    val sentenceMilestones: Map<String, WordMilestone> = emptyMap(),
     val stageSummaries: Map<String, StageProgress> = emptyMap(),
     val loaded: Boolean = false,
 ) {
@@ -29,12 +30,15 @@ data class ReadingState(
 class ReadingViewModel(private val repository: ReadingRepository) : ViewModel() {
     private val readingTimer = ReadingTimer()
     val state = combine(repository.reading, repository.profiles) { reading, profiles ->
-        val milestones = WordProgressCalculator.calculate(Catalog.words, reading.history.filter { it.voidedAt == null }.map {
+        val attempts = reading.history.filter { it.voidedAt == null }.map {
             ProgressAttempt(it.word, it.category, it.sessionId, it.success, it.attemptId)
-        })
+        }
+        val milestones = WordProgressCalculator.calculate(Catalog.words, attempts)
+        val sentenceMilestones = SentenceProgressCalculator.calculate(Catalog.sentences, attempts)
         ReadingState(profileId = reading.profileId, profiles = profiles, settings = reading.settings,
             session = reading.activeSession, card = reading.currentCard, history = reading.history,
             sessions = reading.sessions, achievements = reading.achievements, wordMilestones = milestones,
+            sentenceMilestones = sentenceMilestones,
             stageSummaries = StageCatalog.stages.associate { it.id to WordProgressCalculator.summarize(it.id, milestones) },
             loaded = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReadingState())

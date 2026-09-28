@@ -24,21 +24,22 @@ data class StageProgress(
 }
 
 object WordProgressCalculator {
+    private val sentenceWordPattern = Regex("[a-z]+")
+
     fun calculate(words: List<Word>, attempts: List<ProgressAttempt>): Map<String, WordMilestone> {
         val validWords = words.filter { it.category != Category.THREE_SILLY }.associateBy { it.text }
-        val byWord = attempts.filter { attempt ->
-            attempt.category != SENTENCE_CATEGORY && attempt.category != Category.THREE_SILLY.name &&
-                attempt.word.lowercase() in validWords
-        }.groupBy { it.word.lowercase() }
-        return validWords.mapValues { (word, _) ->
-            val records = byWord[word].orEmpty()
-            val sessions = records.filter { it.success }.map { it.sessionId }.distinct().size
-            val status = when {
-                sessions >= 2 -> WordStatus.CONFIDENT
-                records.isNotEmpty() -> WordStatus.PRACTISING
-                else -> WordStatus.NOT_TRIED
+        val byWord = attempts.flatMap { attempt ->
+            when {
+                attempt.category == SENTENCE_CATEGORY && attempt.success ->
+                    sentenceWordPattern.findAll(attempt.word.lowercase()).map { it.value }.toSet()
+                        .filter { it in validWords }.map { attempt.copy(word = it) }
+                attempt.category == SENTENCE_CATEGORY || attempt.category == Category.THREE_SILLY.name -> emptyList()
+                attempt.word.lowercase() in validWords -> listOf(attempt.copy(word = attempt.word.lowercase()))
+                else -> emptyList()
             }
-            WordMilestone(status, status == WordStatus.CONFIDENT && records.maxByOrNull { it.id }?.success == false, sessions)
+        }.groupBy { it.word }
+        return validWords.mapValues { (word, _) ->
+            milestoneFor(byWord[word].orEmpty())
         }
     }
 
@@ -50,4 +51,23 @@ object WordProgressCalculator {
         return StageProgress(stageId, words.size, confident, practising, words.size - confident - practising,
             values.count { it.needsReview }, values.any { it.independentSessions > 0 })
     }
+}
+
+object SentenceProgressCalculator {
+    fun calculate(sentences: List<Sentence>, attempts: List<ProgressAttempt>): Map<String, WordMilestone> {
+        val validSentences = sentences.associateBy { it.text }
+        val bySentence = attempts.filter { it.category == SENTENCE_CATEGORY && it.word in validSentences }
+            .groupBy { it.word }
+        return validSentences.mapValues { (sentence, _) -> milestoneFor(bySentence[sentence].orEmpty()) }
+    }
+}
+
+private fun milestoneFor(records: List<ProgressAttempt>): WordMilestone {
+    val sessions = records.filter { it.success }.map { it.sessionId }.distinct().size
+    val status = when {
+        sessions >= 2 -> WordStatus.CONFIDENT
+        records.isNotEmpty() -> WordStatus.PRACTISING
+        else -> WordStatus.NOT_TRIED
+    }
+    return WordMilestone(status, status == WordStatus.CONFIDENT && records.maxByOrNull { it.id }?.success == false, sessions)
 }

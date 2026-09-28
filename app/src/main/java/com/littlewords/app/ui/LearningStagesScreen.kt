@@ -21,6 +21,7 @@ import com.littlewords.app.domain.*
     val base = state.settings.config
     var draft by remember(state.profileId, base.selectedSubskills) { mutableStateOf(base.selectedSubskills.orEmpty()) }
     var listFilter by remember(state.profileId) { mutableStateOf("Not tried") }
+    var sentenceListFilter by remember(state.profileId) { mutableStateOf("Not tried") }
     var pendingLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
     val dirty = if (base.selectedSubskills == null) draft.isNotEmpty() else draft != base.selectedSubskills
     fun leave(action: () -> Unit) { if (dirty) pendingLeave = action else action() }
@@ -36,7 +37,7 @@ import com.littlewords.app.domain.*
         }
         Column(Modifier.weight(1f).verticalScroll(scrollState).padding(horizontal = 8.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Confident means read independently in two different sessions. These are your observations, not a test or reading level.",
+            Text("Confident means read independently in two different sessions. A successful sentence also counts for each real word in it. These are your observations, not a test or reading level.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (base.selectedSubskills == null) Text(
                 "Custom selection active. Saving stage choices changes future sessions; current sessions keep their settings.",
@@ -122,6 +123,30 @@ import com.littlewords.app.domain.*
                             color = MaterialTheme.colorScheme.primary)
                     }
                 }
+            }
+            SoftPanel(Modifier.fillMaxWidth().testTag("sentence_progress")) {
+                val sentences = Catalog.sentences
+                val confident = sentences.count { state.sentenceMilestones[it.text]?.status == WordStatus.CONFIDENT }
+                val practising = sentences.count { state.sentenceMilestones[it.text]?.status == WordStatus.PRACTISING }
+                val needsReview = sentences.count { state.sentenceMilestones[it.text]?.needsReview == true }
+                Text("Sentence progress", style = MaterialTheme.typography.titleLarge)
+                Text("A sentence read independently in two different sessions becomes confident. A sentence marked Needs practice does not mark every word as needing practice.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LearningProgressBar(confident, sentences.size, Modifier.fillMaxWidth(), itemLabel = "sentences")
+                Text("$practising practising · ${sentences.size - confident - practising} not tried" +
+                    if (needsReview > 0) " · $needsReview needs review" else "")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Not tried", "Practising", "Confident", "Needs review").forEach { label ->
+                        FilterChip(selected = sentenceListFilter == label, onClick = { sentenceListFilter = label },
+                            label = { Text(label) }, modifier = Modifier.testTag("sentence_filter_${label.lowercase().replace(' ', '_')}"))
+                    }
+                }
+                val listed = sentences.filter { sentence ->
+                    val progress = state.sentenceMilestones[sentence.text]
+                    if (sentenceListFilter == "Needs review") progress?.needsReview == true
+                    else (progress?.status ?: WordStatus.NOT_TRIED).name == sentenceListFilter.uppercase().replace(' ', '_')
+                }
+                Text(if (listed.isEmpty()) "No sentences in this list yet." else listed.joinToString(" · ") { it.text })
             }
             SoftPanel(Modifier.fillMaxWidth()) {
                 Text("Silly words", style = MaterialTheme.typography.titleLarge)

@@ -29,7 +29,6 @@ class LearningStagesTest {
             ProgressAttempt("cat", "THREE_REAL", 1, true, 2),
             ProgressAttempt("cat", "THREE_REAL", 2, true, 3),
             ProgressAttempt("cat", "THREE_REAL", 2, false, 4),
-            ProgressAttempt("cat.", SENTENCE_CATEGORY, 3, true, 5),
         )
         val beforeSecondSession = WordProgressCalculator.calculate(words, attempts.take(2))
         assertEquals(WordStatus.PRACTISING, beforeSecondSession.getValue("cat").status)
@@ -39,6 +38,46 @@ class LearningStagesTest {
         val undone = WordProgressCalculator.calculate(words, attempts.filter { it.id != 3L })
         assertEquals(WordStatus.PRACTISING, undone.getValue("cat").status)
         assertFalse(undone.getValue("cat").needsReview)
+    }
+
+    @Test fun successfulSentenceCreditsItsWordsAcrossDistinctSessions() {
+        val words = Catalog.words.filter { it.text in setOf("cat", "can", "nap", "dad") }
+        val first = ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 1, true, 1)
+        val sameSession = ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 1, true, 2)
+        val second = ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 2, true, 3)
+
+        val afterFirst = WordProgressCalculator.calculate(words, listOf(first, sameSession))
+        assertEquals(WordStatus.PRACTISING, afterFirst.getValue("cat").status)
+        assertEquals(1, afterFirst.getValue("can").independentSessions)
+        assertEquals(WordStatus.NOT_TRIED, afterFirst.getValue("dad").status)
+
+        val afterSecond = WordProgressCalculator.calculate(words, listOf(first, sameSession, second))
+        setOf("cat", "can", "nap").forEach { word ->
+            assertEquals(WordStatus.CONFIDENT, afterSecond.getValue(word).status)
+            assertEquals(2, afterSecond.getValue(word).independentSessions)
+        }
+    }
+
+    @Test fun wordAndSentenceSuccessesCanTogetherBuildConfidence() {
+        val words = Catalog.words.filter { it.text == "cat" }
+        val attempts = listOf(
+            ProgressAttempt("cat", Category.THREE_REAL.name, 1, true, 1),
+            ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 2, true, 2),
+        )
+        assertEquals(WordStatus.CONFIDENT, WordProgressCalculator.calculate(words, attempts).getValue("cat").status)
+    }
+
+    @Test fun missedSentenceDoesNotMarkEveryWordAsNeedingPractice() {
+        val words = Catalog.words.filter { it.text in setOf("cat", "can", "nap") }
+        val attempts = listOf(
+            ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 1, true, 1),
+            ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 2, true, 2),
+            ProgressAttempt("cat can nap.", SENTENCE_CATEGORY, 3, false, 3),
+        )
+        val milestones = WordProgressCalculator.calculate(words, attempts)
+        words.forEach { assertFalse(milestones.getValue(it.text).needsReview) }
+        val undone = WordProgressCalculator.calculate(words, attempts.drop(1))
+        words.forEach { assertEquals(WordStatus.PRACTISING, undone.getValue(it.text).status) }
     }
 
     @Test fun stageChoicesIgnoreOldLengthGroupsAndSeparateCombinedSkills() {

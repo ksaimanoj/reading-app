@@ -33,7 +33,7 @@ import java.util.Locale
             onHistory = { tab = 1 }, onBack = onBack)
         return
     }
-    var filter by remember { mutableStateOf("All") }
+    var filter by rememberSaveable(state.profileId) { mutableStateOf("All") }
     var expandedSessionId by rememberSaveable { mutableStateOf<Long?>(null) }
     val valid = state.validHistory
     val selected = valid.filter { when (filter) {
@@ -44,6 +44,7 @@ import java.util.Locale
     } }
     val successes = selected.count { it.success }
     val revisit = selected.distinctBy { it.word }.filterNot { it.success }
+    val visibleSessions = historySessions(state.sessions, selected, filter)
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
         PageHeader("Every little step", onBack)
         Text(state.profileName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 8.dp))
@@ -55,7 +56,8 @@ import java.util.Locale
             Text("A quiet record for you", style = MaterialTheme.typography.headlineLarge)
             Text("These are your observations, not a test score. Look for confidence growing across sessions.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("All", "Real words", "Silly words", "Sentences").forEach { label -> FilterChip(selected = label == filter, onClick = { filter = label }, label = { Text(label) }) }
+                listOf("All", "Real words", "Silly words", "Sentences").forEach { label -> FilterChip(selected = label == filter,
+                    onClick = { filter = label; expandedSessionId = null }, label = { Text(label) }) }
             }
             SoftPanel(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -71,17 +73,18 @@ import java.util.Locale
             }
             Text("Practice sessions", style = MaterialTheme.typography.titleLarge)
             if (state.sessions.isEmpty()) Text("Your first session is waiting for you.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            state.sessions.forEach { session ->
+            else if (visibleSessions.isEmpty()) Text("No sessions in this group yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            visibleSessions.forEach { session ->
                 SessionHistory(
                     session = session,
-                    attempts = valid.filter { it.sessionId == session.id },
+                    attempts = selected.filter { it.sessionId == session.id },
                     expanded = expandedSessionId == session.id,
                     onToggle = {
                         expandedSessionId = if (expandedSessionId == session.id) null else session.id
                     },
                 )
             }
-            if (valid.isNotEmpty()) {
+            if (selected.isNotEmpty()) {
                 Text("Reading to revisit", style = MaterialTheme.typography.titleLarge)
                 Text(if (revisit.isEmpty()) "Nothing is waiting for another try in this group."
                     else revisit.take(40).joinToString("   ·   ") { it.word }, style = MaterialTheme.typography.bodyLarge)
@@ -97,6 +100,8 @@ import java.util.Locale
                         Text((if (item.success) "Read independently" else "Needs practice") + " · " + formatReadingTime(item.durationMs), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+            } else if (valid.isNotEmpty()) {
+                Text("No reading in this group yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -116,11 +121,16 @@ fun formatReadingTime(durationMs: Long?): String = when {
     onToggle: () -> Unit,
 ) {
     val date = SimpleDateFormat("d MMM · h:mm a", Locale.getDefault()).format(Date(session.startedAt))
+    val ended = session.endedAt?.let { SimpleDateFormat("d MMM · h:mm a", Locale.getDefault()).format(Date(it)) }
     val mode = if (ConfigCodec.decode(session.config).mode == PracticeMode.SENTENCES) "Sentences" else "Words"
     SoftPanel(Modifier.fillMaxWidth()) {
         TextButton(onClick = onToggle, modifier = Modifier.fillMaxWidth().testTag("session_${session.id}")) {
             Column(Modifier.fillMaxWidth()) {
-                Text("${if (expanded) "▾" else "▸"}  $date · $mode" + if (session.endedAt == null) " · In progress" else "")
+                Text("${if (expanded) "▾" else "▸"}  Started $date · $mode")
+                Text(if (ended == null) "In progress · End time and duration available when the session ends"
+                    else "Ended $ended · Duration ${formatSessionDuration(session.startedAt, session.endedAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     "${attempts.size} attempts · ${attempts.count { it.success }} independent reads",
                     style = MaterialTheme.typography.bodySmall,

@@ -17,18 +17,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-@Composable fun LearningProgressBar(confident: Int, total: Int, modifier: Modifier = Modifier) {
+@Composable fun LearningProgressBar(confident: Int, total: Int, modifier: Modifier = Modifier, itemLabel: String = "words") {
     val progress = if (total > 0) (confident.toFloat() / total).coerceIn(0f, 1f) else 0f
     val percentage = (progress * 100).roundToInt()
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("$confident of $total words confident", style = MaterialTheme.typography.bodyMedium)
+        Text("$confident of $total $itemLabel confident", style = MaterialTheme.typography.bodyMedium)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.weight(1f).height(8.dp).clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .semantics {
                     progressBarRangeInfo = ProgressBarRangeInfo(progress, 0f..1f)
-                    stateDescription = "$percentage percent, $confident of $total words confident"
+                    stateDescription = "$percentage percent, $confident of $total $itemLabel confident"
                 }) {
                 if (progress > 0f) Box(Modifier.fillMaxWidth(progress).fillMaxHeight()
                     .clip(CircleShape).background(MaterialTheme.colorScheme.primary))
