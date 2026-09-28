@@ -1,5 +1,17 @@
 # Verification
 
+## Slate blue and portrait navigation 1.8 — 28 September 2026
+
+Implemented the user-approved Slate blue palette in both appearances, including selected controls, links, progress bars and the launcher. Phone navigation is portrait; word/sentence reading and Pause remain landscape. Tablet and multi-window orientation is unrestricted. Headers and history adapt to portrait; large-text Home labels were corrected after visual inspection.
+
+- 40 local Kotlin tests and all 37 connected Android tests passed on the isolated Android 16 emulator. The added orientation test checks landscape reading/Pause, activity recreation, portrait Home, and resuming the same card.
+- Both activity-recreation tests passed again at an 800 dp tablet width after the final Home label adjustment.
+- The final debug build and lint passed: no errors; one Android Gradle plugin update advisory.
+- Home and Settings were visually inspected in Light and Dark at 1080×2400. Home was inspected at 320 dp width and 1.5× text; all navigation and reading actions remain readable. Evidence: [`home-light.png`](screenshots/slate-blue/home-light.png), [`home-dark.png`](screenshots/slate-blue/home-dark.png), [`settings-dark.png`](screenshots/slate-blue/settings-dark.png), [`home-dark-large-text.png`](screenshots/slate-blue/home-dark-large-text.png).
+- Version 1.8, code 10, retains application ID `com.littlewords.app`. The signing certificate matches the previous development APK. Final APK SHA-256: `28c88698f774a9b3d3cbbfaac5119610d6bad390f65eec51d5c5831d49e6f7b0`. Build, deliverables and both project-output copies are identical.
+- This is a development-signed test APK. A physical family-device upgrade and split-screen visual sweep were not performed. Startup background follows the system theme until saved per-profile appearance loads. This does not constitute complete Play Store readiness testing.
+
+
 ## Database upgrade fix 1.7.1 — 27 September 2026
 
 The Redmi app crashed on launch after upgrading directly from 1.5 to 1.7. Room rejected the version-3 `sessions` table during the version-4 migration because the earlier app had created a partial `one_active_session_per_profile` index that Room's exported schema does not declare. The migration now drops both manually managed partial indices before Room validates the schema; the existing `onOpen` callback recreates them afterward.

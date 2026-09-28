@@ -26,7 +26,7 @@ private fun Context.activity(): Activity? = when (this) {
     else -> null
 }
 
-@Composable fun LittleWordsApp(model: ReadingViewModel) {
+@Composable fun LittleWordsApp(model: ReadingViewModel, onReadingChanged: (Boolean) -> Unit = {}) {
     val state by model.state.collectAsStateWithLifecycle()
     val busy by model.busy.collectAsStateWithLifecycle()
     val error by model.error.collectAsStateWithLifecycle()
@@ -40,6 +40,7 @@ private fun Context.activity(): Activity? = when (this) {
         }
     }
     val reading = page == "reading"
+    SideEffect { onReadingChanged(reading) }
     val activity = LocalContext.current.activity()
     val lifecycleOwner = LocalLifecycleOwner.current
     var foreground by remember(lifecycleOwner) {

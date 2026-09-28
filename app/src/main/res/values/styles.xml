@@ -3,6 +3,6 @@
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowBackground">#F8F5EE</item>
+        <item name="android:windowBackground">#F8F6F1</item>
     </style>
 </resources>

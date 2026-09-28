@@ -60,11 +60,21 @@ import java.util.Locale
                     onClick = { filter = label; expandedSessionId = null }, label = { Text(label) }) }
             }
             SoftPanel(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Stat(selected.size.toString(), "attempts", Modifier.weight(1f))
-                    Stat(successes.toString(), "read independently", Modifier.weight(1f))
-                    Stat((selected.size - successes).toString(), "needed practice", Modifier.weight(1f))
-                    Stat(if (selected.isEmpty()) "—" else "${successes * 100 / selected.size}%", "independent reads", Modifier.weight(1f))
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val stats = listOf(
+                        selected.size.toString() to "attempts",
+                        successes.toString() to "read independently",
+                        (selected.size - successes).toString() to "needed practice",
+                        (if (selected.isEmpty()) "—" else "${successes * 100 / selected.size}%") to "independent reads",
+                    )
+                    val columns = if (maxWidth < 500.dp) 2 else 4
+                    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                        stats.chunked(columns).forEach { row ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                row.forEach { (value, label) -> Stat(value, label, Modifier.weight(1f)) }
+                            }
+                        }
+                    }
                 }
             }
             if (valid.isEmpty()) {
@@ -91,7 +101,7 @@ import java.util.Locale
                 Text("Based on the latest attempt at each word or sentence. Undone swipes are excluded.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Recent reading", style = MaterialTheme.typography.titleLarge)
                 selected.take(20).forEach { item ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(item.word + when (item.category) {
                             Category.THREE_SILLY.name -> "  ·  silly"
                             SENTENCE_CATEGORY -> "  ·  sentence"

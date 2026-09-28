@@ -22,10 +22,14 @@ fun Category.displayName(): String = when(this) {
 }
 
 @Composable fun PageHeader(title: String, onBack: () -> Unit, action: @Composable RowScope.() -> Unit = {}) {
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = onBack) { Text("← Back") }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 12.dp))
-        action()
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        val compact = maxWidth < 420.dp
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack, contentPadding = PaddingValues(horizontal = if (compact) 4.dp else 12.dp)) { Text("← Back") }
+            Text(title, style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f).padding(horizontal = if (compact) 8.dp else 12.dp))
+            action()
+        }
     }
 }
 

@@ -2,16 +2,22 @@
 
 Little Words is a private, offline Android app for parent-guided reading practice. It shows one large word or short sentence at a time and records whether the child read it independently or needs more practice.
 
+## Design prototype
+
+The [navigable HTML prototype](design/prototype.html) is the current Android UI baseline for design review. It uses illustrative data. Review proposed user-facing changes there before implementing them in the app. The [screen comparison](design/SCREEN_COMPARISON.md) links saved emulator captures, and the [feature audit](design/FEATURE_AUDIT.md) records current features and interactions to resolve. Project guidance is in [AGENTS.md](AGENTS.md) and [project memory](memory/projects/little-words.md).
+
 ## Using the app
 
 1. Tap the profile name on the home screen to switch children or add a **Testing** profile. Existing data from an earlier version appears under **Gagan**.
 2. Open **Progress → Learning stages** to see this child's unique-word milestones and filtered sentence progress. Expand a stage to see its skills and word lists. Reading a sentence independently also credits each real word in it. A word or sentence becomes confident after independent reads in two different sessions; a later Needs practice score marks that item for review without removing confidence. A missed sentence does not mark all of its words as missed.
 3. Include the stages and skills you want, then tap **Save choices**. You can mix earlier review with new content. Changes affect the next session; an active session keeps its saved choices. Existing profiles continue using their custom length and sound filters until you save stage choices.
-4. Choose **System**, **Light**, or **Dark** appearance.
+4. Choose **System**, **Light**, or **Dark** appearance. Both themes use slate-blue accents.
 5. Tap **Start reading** for individual words, or **Try short sentences** for sentence practice.
 6. Swipe right for **Read independently**. Swipe left for **Needs practice**.
 7. Tap **Pause** to undo the latest swipe, save your place, or end the session.
 8. Open **Progress → History** for session history. Filter by words or sentences and tap a session to see matching attempts. Ended sessions show their end time and elapsed duration.
+
+On phones, navigation screens use portrait; word and sentence reading, including Pause, use landscape. Tablets and multi-window layouts follow the available space. Returning home and resuming keeps the current card.
 
 Sounding out and then blending the whole word or sentence counts as an independent read. If the parent supplies a sound or the answer, use Needs practice. Silly words are deliberately unfamiliar and are marked on screen by default. Sentence practice uses only sentences whose letters and sound-pattern tags are currently enabled. Every eligible sentence appears before the app repeats one, including across sessions. Within later passes, less-seen sentences come first.
 

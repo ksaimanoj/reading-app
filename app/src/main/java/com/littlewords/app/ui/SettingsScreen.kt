@@ -35,7 +35,7 @@ fun toggleCategory(config: PracticeConfig, category: Category): PracticeConfig =
     val errors = Selector.validate(config)
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
         PageHeader("Make it their own", onBack) {
-            Button(enabled = !busy && errors.isEmpty(), onClick = { onSave(AppSettings(config, settings.theme, buttons, sillyMarker)) }) { Text("Save & back") }
+            Button(modifier = Modifier.widthIn(max = 110.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), enabled = !busy && errors.isEmpty(), onClick = { onSave(AppSettings(config, settings.theme, buttons, sillyMarker)) }) { Text("Save & back") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

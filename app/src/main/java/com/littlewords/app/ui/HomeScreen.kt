@@ -57,13 +57,29 @@ import com.littlewords.app.domain.StageCatalog
             Text("L", color = MaterialTheme.colorScheme.onPrimary, fontFamily = FontFamily.Serif, fontSize = 22.sp)
         }
         Text("little words", Modifier.weight(1f).padding(start = 10.dp), fontSize = 22.sp, fontFamily = FontFamily.Serif, maxLines = 1)
-        TextButton(onClick = onProfiles, modifier = Modifier.widthIn(max = 140.dp)) {
+        if (wide) {
+            TextButton(onClick = onProfiles, modifier = Modifier.widthIn(max = 140.dp)) {
+                Text("$profileName ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            HomeNavigation(onProgress, onSettings)
+        }
+    }
+    val largeText = LocalDensity.current.fontScale > 1.2f
+    if (!wide && largeText) {
+        TextButton(onClick = onProfiles, modifier = Modifier.fillMaxWidth()) {
             Text("$profileName ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (wide) HomeNavigation(onProgress, onSettings)
     }
-    if (!wide) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        HomeNavigation(onProgress, onSettings)
+    if (!wide) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (!largeText) OutlinedButton(onClick = onProfiles, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp)) {
+            Text("$profileName ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        OutlinedButton(onClick = onProgress, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp)) {
+            Text("Progress", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        OutlinedButton(onClick = onSettings, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp)) {
+            Text("Settings", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -79,7 +95,7 @@ import com.littlewords.app.domain.StageCatalog
         fontFamily = FontFamily.Serif,
         fontSize = if (compact) 36.sp else 48.sp,
         lineHeight = if (compact) 40.sp else 52.sp,
-        maxLines = 1,
+        maxLines = 2,
     )
 }
 
@@ -101,17 +117,17 @@ import com.littlewords.app.domain.StageCatalog
         }
         if (activeSession) {
             Text("$practiced ${if (sentenceSession) "sentences" else "words"} completed", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = { onStart(mode) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp)) {
+            Button(onClick = { onStart(mode) }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = if (compact) 48.dp else 54.dp)) {
                 Text("Resume reading", fontSize = 17.sp)
             }
         } else {
-            Button(onClick = { onStart(PracticeMode.WORDS) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp)) {
+            Button(onClick = { onStart(PracticeMode.WORDS) }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = if (compact) 48.dp else 54.dp)) {
                 Text("Start reading", fontSize = 17.sp)
             }
             OutlinedButton(onClick = { onStart(PracticeMode.SENTENCES) }, enabled = !busy,
-                modifier = Modifier.fillMaxWidth().height(if (compact) 44.dp else 54.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = if (compact) 48.dp else 54.dp)
                     .semantics { contentDescription = "Try short sentences" }) {
-                Text(if (compact && largeText) "Sentences" else "Try short sentences", fontSize = if (compact) 13.sp else 17.sp,
+                Text(if (largeText) "Sentences" else "Try short sentences", fontSize = if (compact) 13.sp else 17.sp,
                     maxLines = 1)
             }
         }
