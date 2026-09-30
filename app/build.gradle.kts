@@ -3,6 +3,20 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+val releaseSigningEnvironment = mapOf(
+    "LITTLEWORDS_RELEASE_KEYSTORE" to System.getenv("LITTLEWORDS_RELEASE_KEYSTORE"),
+    "LITTLEWORDS_RELEASE_STORE_PASSWORD" to System.getenv("LITTLEWORDS_RELEASE_STORE_PASSWORD"),
+    "LITTLEWORDS_RELEASE_KEY_ALIAS" to System.getenv("LITTLEWORDS_RELEASE_KEY_ALIAS"),
+    "LITTLEWORDS_RELEASE_KEY_PASSWORD" to System.getenv("LITTLEWORDS_RELEASE_KEY_PASSWORD"),
+)
+val releaseSigningRequested = releaseSigningEnvironment.values.any { !it.isNullOrBlank() }
+if (releaseSigningRequested) {
+    require(releaseSigningEnvironment.values.all { !it.isNullOrBlank() }) {
+        "Release signing requires all four LITTLEWORDS_RELEASE_* environment variables."
+    }
+}
+
 android {
     namespace = "com.littlewords.app"
     compileSdk = 36
@@ -10,14 +24,31 @@ android {
         applicationId = "com.littlewords.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.8"
+        versionCode = 11
+        versionName = "1.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    if (releaseSigningRequested) {
+        signingConfigs {
+            create("release") {
+                val keystore = file(releaseSigningEnvironment.getValue("LITTLEWORDS_RELEASE_KEYSTORE")!!)
+                require(keystore.isFile) { "Release keystore does not exist: $keystore" }
+                storeFile = keystore
+                storePassword = releaseSigningEnvironment.getValue("LITTLEWORDS_RELEASE_STORE_PASSWORD")
+                keyAlias = releaseSigningEnvironment.getValue("LITTLEWORDS_RELEASE_KEY_ALIAS")
+                keyPassword = releaseSigningEnvironment.getValue("LITTLEWORDS_RELEASE_KEY_PASSWORD")
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }

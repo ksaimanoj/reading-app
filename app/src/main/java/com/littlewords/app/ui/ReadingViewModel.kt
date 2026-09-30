@@ -74,6 +74,7 @@ class ReadingViewModel(private val repository: ReadingRepository) : ViewModel() 
     fun end(onSuccess: () -> Unit) = write(onSuccess) { repository.endSession() }
     fun saveSettings(settings: AppSettings, onSuccess: () -> Unit) = write(onSuccess) { repository.saveSettings(settings) }
     fun theme(mode: ThemeMode) = write { repository.setTheme(mode) }
+    fun showScoringButtons(show: Boolean) = write { repository.setShowButtons(show) }
     fun selectProfile(id: Long, onSuccess: () -> Unit) = write(onSuccess) { repository.selectProfile(id) }
     fun createProfile(name: String, onSuccess: (Long) -> Unit) {
         var id = 0L

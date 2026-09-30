@@ -3,6 +3,7 @@ package com.littlewords.app
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.geometry.Offset
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.littlewords.app.data.*
 import com.littlewords.app.domain.Category
@@ -10,6 +11,8 @@ import com.littlewords.app.domain.SENTENCE_CATEGORY
 import com.littlewords.app.ui.LittleWordsApp
 import com.littlewords.app.ui.ReadingViewModel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import org.junit.*
 import org.junit.Assert.*
@@ -18,15 +21,21 @@ class ReadingUiTest {
     @get:Rule val compose = createComposeRule()
     private lateinit var db: ReadingDatabase
     private lateinit var repo: ReadingRepository
+    private lateinit var model: ReadingViewModel
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
     private val name = "ui-${java.util.UUID.randomUUID()}.db"
     @Before fun setup() {
         db = ReadingDatabase.open(context, name)
         repo = ReadingRepository(db)
-        compose.setContent { LittleWordsApp(ReadingViewModel(repo)) }
+        model = ReadingViewModel(repo)
+        compose.setContent { LittleWordsApp(model) }
         compose.waitUntil(10000) { compose.onAllNodesWithText("Start reading").fetchSemanticsNodes().isNotEmpty() }
     }
-    @After fun cleanup() { db.close(); context.deleteDatabase(name) }
+    @After fun cleanup() {
+        runBlocking { model.viewModelScope.coroutineContext[Job]?.cancelAndJoin() }
+        db.close()
+        context.deleteDatabase(name)
+    }
 
     @Test fun homeShowsBothReadingChoicesWithoutScroll() {
         compose.onNodeWithText("Start reading").assertIsDisplayed()
@@ -59,7 +68,7 @@ class ReadingUiTest {
         compose.waitUntil(10000) { runBlocking { repo.history.first().count { it.voidedAt == null } == 1 } }
     }
 
-    @Test fun shortSentenceModeStartsAReviewedSentenceSession() {
+    @Test fun shortSentenceModeStartsASentenceSession() {
         compose.onNodeWithText("Try short sentences").performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithText("short sentence").fetchSemanticsNodes().isNotEmpty() }
 
@@ -107,6 +116,20 @@ class ReadingUiTest {
         compose.waitUntil(10000) { runBlocking { repo.settings.first().theme == ThemeMode.LIGHT } }
         compose.onNodeWithText("System", useUnmergedTree = true).performClick()
         compose.waitUntil(10000) { runBlocking { repo.settings.first().theme == ThemeMode.SYSTEM } }
+    }
+
+    @Test fun privacyScreenReturnsToUnsavedSettingsChoices() {
+        compose.onNodeWithText("Settings").performClick()
+        compose.onNodeWithTag("category_FOUR_REAL").performScrollTo().performClick()
+        compose.onNodeWithText("About & privacy").performScrollTo().performClick()
+        compose.onNodeWithText("Little Words keeps reading profiles and progress in private app storage on this device.").assertExists()
+        compose.onNodeWithText("Make it their own").assertDoesNotExist()
+        compose.onNodeWithText("← Back").performClick()
+        compose.onNodeWithTag("category_FOUR_REAL").assertIsOn()
+        compose.onNodeWithText("Save & back").performClick()
+        compose.waitUntil(10000) {
+            Category.FOUR_REAL in runBlocking { repo.settings.first().config.enabledCategories }
+        }
     }
 
     @Test fun settingsUseWordGroupSwitchesInsteadOfPercentages() {

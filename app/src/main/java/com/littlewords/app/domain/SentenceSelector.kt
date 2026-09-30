@@ -5,7 +5,7 @@ import kotlin.random.Random
 object SentenceSelector {
     fun validate(config: PracticeConfig): List<String> = buildList {
         if (eligible(config).isEmpty()) {
-            add("There are no reviewed sentences for the selected letters and sound patterns.")
+            add("There are no short sentences for the selected letters and sound patterns.")
         }
     }
 
@@ -26,7 +26,7 @@ object SentenceSelector {
     ): Sentence {
         val pool = eligible(config)
         require(pool.isNotEmpty()) {
-            "There are no reviewed sentences for the selected letters and sound patterns."
+            "There are no short sentences for the selected letters and sound patterns."
         }
 
         // Complete a pass through the eligible catalogue before showing a sentence again.

@@ -12,8 +12,8 @@ The [navigable HTML prototype](design/prototype.html) is the current Android UI 
 2. Open **Progress → Learning stages** to see this child's unique-word milestones and filtered sentence progress. Expand a stage to see its skills and word lists. Reading a sentence independently also credits each real word in it. A word or sentence becomes confident after independent reads in two different sessions; a later Needs practice score marks that item for review without removing confidence. A missed sentence does not mark all of its words as missed.
 3. Include the stages and skills you want, then tap **Save choices**. You can mix earlier review with new content. Changes affect the next session; an active session keeps its saved choices. Existing profiles continue using their custom length and sound filters until you save stage choices.
 4. Choose **System**, **Light**, or **Dark** appearance. Both themes use slate-blue accents.
-5. Tap **Start reading** for individual words, or **Try short sentences** for sentence practice.
-6. Swipe right for **Read independently**. Swipe left for **Needs practice**.
+5. Tap **Start reading** for individual words, or **Try short sentences** for sentence practice. Home shows how many sentences match the current choices. If none match, tap **Adjust choices**.
+6. Swipe right for **Read it** or left for **Needs practice**. The first reading card explains the gestures; **Show buttons** offers the same scoring actions without swiping and saves that preference for the current child.
 7. Tap **Pause** to undo the latest swipe, save your place, or end the session.
 8. Open **Progress → History** for session history. Filter by words or sentences and tap a session to see matching attempts. Ended sessions show their end time and elapsed duration.
 
@@ -23,7 +23,7 @@ Sounding out and then blending the whole word or sentence counts as an independe
 
 Learning-stage totals count the bundled real-word collection, not every English word or the currently enabled practice pool. Each stage and expanded skill shows a progress bar, percentage, and confident-word count out of its full collection. Each real word belongs to exactly one stage and skill. The initial stages are short-vowel CVC words, digraphs and doubled consonants, and blends. Two-letter, tricky, and two-syllable words are in Additional practice. Silly words are separate and do not count toward real-word milestones. Detailed stage progress is a record of parent observations, not a reading-level assessment. The app does not automatically unlock or disable stages. More advanced vowel stages await reviewed content.
 
-**Settings** keeps appearance, scoring-button, and silly-word display preferences. After saving stage choices, open **Advanced options** there to restrict letters or sound patterns. The stage counts stay fixed; each expanded skill shows how many of its words remain available under those restrictions. If a later release adds real words, increase `CATALOGUE_VERSION` in `LearningStages.kt` so completion records for the earlier collection remain visible.
+**Settings** keeps appearance, scoring-button, and silly-word display preferences, and opens **About & privacy** for local-data details. After saving stage choices, open **Advanced options** there to restrict letters or sound patterns. Stage choices guide sentence practice by supported sounds; a sentence may contain a word assigned to another stage. The stage counts stay fixed; each expanded skill shows how many of its words remain available under those restrictions. If a later release adds real words, increase `CATALOGUE_VERSION` in `LearningStages.kt` so completion records for the earlier collection remain visible.
 
 Reading time starts when a card is visible and ends when it is scored. Pauses and time in the background are excluded. The time is stored with each new attempt; older attempts show **time not recorded**. If Android terminates the app mid-card, timing restarts when the card is shown again.
 
@@ -33,13 +33,15 @@ Session duration is elapsed time from the saved start time to the end time. It i
 
 The app has no internet permission, account, advertising, analytics, or remote content. Each profile has separate settings, reading history, and saved sessions. They stay in app-private storage on the device. Android backup and device-transfer backup are disabled for this data.
 
-Uninstalling the app or clearing its storage deletes the reading history. Export and restore are future features.
+Uninstalling the app or clearing its storage deletes the reading history. Export and restore are future features. The About & privacy screen summarizes these facts. A complete public policy with publisher contact details is still required before Play submission; see [the release checklist](docs/PLAY_PRIVACY_CHECKLIST.md).
 
 ## Installing or upgrading the supplied APK
 
 The ready-to-install development build is in `deliverables/LittleWords-debug.apk`. Copy it to an Android device running Android 8.0 or later and open it. Android may ask you to allow installation from the app used to open the file.
 
 This APK is signed with a development key. A Play Store or long-term family release should use a private release signing key.
+
+For Play bundle signing and the family phone's data-transition steps, see [Play release and existing-device data](docs/PLAY_RELEASE.md).
 
 Settings and reading history survive a normal APK upgrade when the new APK keeps the `com.littlewords.app` application ID, is signed with the same key, and has a higher version code. Keep the signing keystore safe: Android will reject an upgrade signed with a different key. Uninstalling or clearing app storage still deletes local data.
 

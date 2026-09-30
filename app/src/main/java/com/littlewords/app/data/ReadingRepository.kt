@@ -90,6 +90,12 @@ class ReadingRepository(private val db: ReadingDatabase) {
         dao.putSettings(SettingsEntity.from(current.copy(theme = theme), profileId))
     }
 
+    suspend fun setShowButtons(show: Boolean) = db.withTransaction {
+        val profileId = dao.profileId()
+        val current = dao.settings(profileId)?.toSettings() ?: AppSettings()
+        dao.putSettings(SettingsEntity.from(current.copy(showButtons = show), profileId))
+    }
+
     suspend fun startSession(mode: PracticeMode = PracticeMode.WORDS) = db.withTransaction {
         val profileId = dao.profileId()
         if (dao.activeSession(profileId) != null) return@withTransaction

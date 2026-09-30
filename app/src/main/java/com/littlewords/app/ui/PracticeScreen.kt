@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -21,11 +22,23 @@ import com.littlewords.app.domain.Category
 import com.littlewords.app.domain.SENTENCE_CATEGORY
 import kotlin.math.abs
 
-@Composable fun PracticeScreen(card: CardEntity, settings: AppSettings, busy: Boolean, onScore: (Boolean) -> Unit, onPause: () -> Unit) {
+@Composable fun PracticeScreen(
+    card: CardEntity,
+    settings: AppSettings,
+    busy: Boolean,
+    onScore: (Boolean) -> Unit,
+    onPause: () -> Unit,
+    onToggleButtons: () -> Unit,
+) {
     var drag by remember(card.id) { mutableFloatStateOf(0f) }
     var vertical by remember(card.id) { mutableFloatStateOf(0f) }
+    var scoringHintSeen by rememberSaveable { mutableStateOf(false) }
     val threshold = with(LocalDensity.current) { 64.dp.toPx() }
     val latestScore by rememberUpdatedState(onScore)
+    val score: (Boolean) -> Unit = { success ->
+        scoringHintSeen = true
+        latestScore(success)
+    }
     val isSentence = card.category == SENTENCE_CATEGORY
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -34,6 +47,9 @@ import kotlin.math.abs
                     Text("✦  silly word", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (isSentence)
                     Text("short sentence", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onToggleButtons, enabled = !busy) {
+                Text(if (settings.showButtons) "Hide buttons" else "Show buttons")
             }
             TextButton(onClick = onPause, enabled = !busy) { Text("Pause") }
         }
@@ -44,7 +60,7 @@ import kotlin.math.abs
                     onHorizontalDrag = { change, amount -> drag += amount; vertical += change.positionChange().y; change.consume() },
                     onDragCancel = { drag = 0f; vertical = 0f },
                     onDragEnd = {
-                        if (abs(drag) >= threshold && abs(drag) > abs(vertical) * 1.4f) latestScore(drag > 0f)
+                        if (abs(drag) >= threshold && abs(drag) > abs(vertical) * 1.4f) score(drag > 0f)
                         drag = 0f; vertical = 0f
                     },
                 )
@@ -59,8 +75,16 @@ import kotlin.math.abs
                 textAlign = TextAlign.Center, modifier = Modifier.testTag("readingWord").graphicsLayer { translationX = drag * .15f })
         }
         if (settings.showButtons) Row(Modifier.fillMaxWidth().padding(horizontal = 30.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            OutlinedButton(enabled = !busy, onClick = { onScore(false) }) { Text("←  Needs practice") }
-            Button(enabled = !busy, onClick = { onScore(true) }) { Text("Read it  →") }
+            OutlinedButton(enabled = !busy, onClick = { score(false) }) { Text("←  Needs practice") }
+            Button(enabled = !busy, onClick = { score(true) }) { Text("Read it  →") }
+        } else if (!scoringHintSeen) {
+            Text(
+                "Swipe right for Read it; swipe left for Needs practice. Or show scoring buttons.",
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
         } else Spacer(Modifier.height(24.dp))
     }
 }

@@ -39,6 +39,8 @@ import com.littlewords.app.domain.*
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Confident means read independently in two different sessions. A successful sentence also counts for each real word in it. These are your observations, not a test or reading level.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Selected stages guide sentence practice by supported sounds. A sentence may include a word from another stage.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (base.selectedSubskills == null) Text(
                 "Custom selection active. Saving stage choices changes future sessions; current sessions keep their settings.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -119,7 +121,7 @@ import com.littlewords.app.domain.*
                     if (!summary.collectionComplete) state.achievements.filter {
                         it.stageId == stage.id && it.catalogueVersion < CATALOGUE_VERSION
                     }.maxByOrNull { it.catalogueVersion }?.let { previous ->
-                        Text("Completed the version ${previous.catalogueVersion} collection. New reviewed words were added to this version.",
+                        Text("Completed the version ${previous.catalogueVersion} collection. New words were added to this version.",
                             color = MaterialTheme.colorScheme.primary)
                     }
                 }
@@ -150,7 +152,7 @@ import com.littlewords.app.domain.*
             }
             SoftPanel(Modifier.fillMaxWidth()) {
                 Text("Silly words", style = MaterialTheme.typography.titleLarge)
-                Text("${StageCatalog.words("silly").size} reviewed silly words. Separate practice; these do not count toward real-word milestones.")
+                Text("${StageCatalog.words("silly").size} silly words. Separate practice; these do not count toward real-word milestones.")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Include in practice", modifier = Modifier.weight(1f))
                     Switch(checked = StageCatalog.SILLY_KEY in draft, onCheckedChange = {
@@ -158,9 +160,9 @@ import com.littlewords.app.domain.*
                     }, modifier = Modifier.semantics { contentDescription = "Include silly words in practice" })
                 }
             }
-            Text("More sound patterns will appear when reviewed words are available. They cannot be selected yet.",
+            Text("More sound patterns will appear when words are added. They cannot be selected yet.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Catalogue version $CATALOGUE_VERSION · totals count each reviewed real word once and do not change with practice choices.",
+            Text("Catalogue version $CATALOGUE_VERSION · totals count each catalogued real word once and do not change with practice choices.",
                 style = MaterialTheme.typography.bodySmall)
             if (state.session != null) Text("Your current session keeps its saved choices. Changes affect the next session.",
                 color = MaterialTheme.colorScheme.primary)

@@ -200,6 +200,31 @@ class RepositoryTest {
         assertEquals(original, repo.activeSession.first()!!.config)
     }
 
+    @Test fun readingScreenButtonChoicePersistsWithoutChangingTheCurrentSessionOrOtherProfiles() = runBlocking {
+        val original = AppSettings(theme = ThemeMode.DARK, config = PracticeConfig(
+            enabledCategories = setOf(Category.THREE_REAL),
+        ))
+        repo.saveSettings(original)
+        repo.startSession()
+        val sessionConfig = repo.activeSession.first()!!.config
+
+        repo.setShowButtons(true)
+        assertEquals(original.copy(showButtons = true), repo.settings.first())
+        assertEquals(sessionConfig, repo.activeSession.first()!!.config)
+
+        val second = repo.createProfile("Second")
+        assertFalse(repo.settings.first().showButtons)
+        repo.selectProfile(1)
+        assertTrue(repo.settings.first().showButtons)
+
+        db.close()
+        db = ReadingDatabase.open(context, databaseName)
+        repo = ReadingRepository(db)
+        assertTrue(repo.settings.first().showButtons)
+        repo.selectProfile(second)
+        assertFalse(repo.settings.first().showButtons)
+    }
+
     @Test fun endingLeavesUnscoredWordOutOfResults() = runBlocking {
         repo.startSession()
         repo.endSession()

@@ -19,9 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.littlewords.app.domain.PracticeMode
 import com.littlewords.app.domain.SENTENCE_CATEGORY
+import com.littlewords.app.domain.SentenceSelector
 import com.littlewords.app.domain.StageCatalog
 
-@Composable fun HomeScreen(state: ReadingState, busy: Boolean, onStart: (PracticeMode) -> Unit, onSettings: () -> Unit, onProgress: () -> Unit, onProfiles: () -> Unit) {
+@Composable fun HomeScreen(state: ReadingState, busy: Boolean, onStart: (PracticeMode) -> Unit, onSettings: () -> Unit,
+    onAdjustSentences: () -> Unit, onProgress: () -> Unit, onProfiles: () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
         val wide = maxWidth >= 600.dp
         val compact = maxHeight < 500.dp
@@ -38,12 +40,12 @@ import com.littlewords.app.domain.StageCatalog
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
                                 maxLines = 3, overflow = TextOverflow.Ellipsis)
                         } else HomeTitle(false, Modifier.weight(1f))
-                        HomeActions(state, busy, compact, onStart, onProgress, Modifier.weight(1f))
+                        HomeActions(state, busy, compact, onStart, onAdjustSentences, onProgress, Modifier.weight(1f))
                     }
                 } else {
                     Column(Modifier.fillMaxWidth().widthIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 24.dp)) {
                         HomeTitle(compact, Modifier.fillMaxWidth())
-                        HomeActions(state, busy, compact, onStart, onProgress, Modifier.fillMaxWidth())
+                        HomeActions(state, busy, compact, onStart, onAdjustSentences, onProgress, Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -100,12 +102,13 @@ import com.littlewords.app.domain.StageCatalog
 }
 
 @Composable private fun HomeActions(state: ReadingState, busy: Boolean, compact: Boolean,
-    onStart: (PracticeMode) -> Unit, onProgress: () -> Unit, modifier: Modifier) {
+    onStart: (PracticeMode) -> Unit, onAdjustSentences: () -> Unit, onProgress: () -> Unit, modifier: Modifier) {
     val activeSession = state.session != null
     val sentenceSession = state.card?.category == SENTENCE_CATEGORY
     val practiced = state.validHistory.count { it.sessionId == state.session?.id }
     val mode = if (sentenceSession) PracticeMode.SENTENCES else PracticeMode.WORDS
     val largeText = LocalDensity.current.fontScale > 1.2f
+    val sentenceCount = SentenceSelector.eligible(state.settings.config).size
     Column(
         modifier.clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(if (compact) 12.dp else 20.dp),
@@ -124,11 +127,19 @@ import com.littlewords.app.domain.StageCatalog
             Button(onClick = { onStart(PracticeMode.WORDS) }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = if (compact) 48.dp else 54.dp)) {
                 Text("Start reading", fontSize = 17.sp)
             }
-            OutlinedButton(onClick = { onStart(PracticeMode.SENTENCES) }, enabled = !busy,
-                modifier = Modifier.fillMaxWidth().heightIn(min = if (compact) 48.dp else 54.dp)
-                    .semantics { contentDescription = "Try short sentences" }) {
-                Text(if (largeText) "Sentences" else "Try short sentences", fontSize = if (compact) 13.sp else 17.sp,
-                    maxLines = 1)
+            if (sentenceCount == 0) {
+                Text("No short sentences match these choices.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = onAdjustSentences, enabled = !busy) { Text("Adjust choices") }
+            } else {
+                Text("$sentenceCount short sentences available with these choices.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(onClick = { onStart(PracticeMode.SENTENCES) }, enabled = !busy,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = if (compact) 48.dp else 54.dp)
+                        .semantics { contentDescription = "Try short sentences" }) {
+                    Text(if (largeText) "Sentences" else "Try short sentences", fontSize = if (compact) 13.sp else 17.sp,
+                        maxLines = 1)
+                }
             }
         }
     }

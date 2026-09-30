@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,6 +35,8 @@ private fun Context.activity(): Activity? = when (this) {
     val error by model.error.collectAsStateWithLifecycle()
     var page by rememberSaveable { mutableStateOf("home") }
     var paused by rememberSaveable { mutableStateOf(false) }
+    var showingPrivacy by rememberSaveable { mutableStateOf(false) }
+    var openSentenceChoices by rememberSaveable { mutableStateOf(false) }
     var pendingProfileId by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(state.profileId, pendingProfileId) {
         if (pendingProfileId != null && state.profileId == pendingProfileId) {
@@ -73,7 +78,8 @@ private fun Context.activity(): Activity? = when (this) {
         }
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
-    BackHandler(page != "home") { if (reading) paused = true else page = "home" }
+    BackHandler(page != "home" && !showingPrivacy) { if (reading) paused = true else page = "home" }
+    BackHandler(showingPrivacy) { showingPrivacy = false }
     LittleWordsTheme(state.settings.theme) {
         val lightBars = MaterialTheme.colorScheme.background.luminance() > 0.5f
         SideEffect {
@@ -90,21 +96,40 @@ private fun Context.activity(): Activity? = when (this) {
             } else when (page) {
                 "home" -> HomeScreen(state, busy,
                     onStart = { mode -> model.start(mode) { page = "reading"; paused = false } },
-                    onSettings = { page = "settings" }, onProgress = { page = "progress" },
+                    onSettings = { openSentenceChoices = false; page = "settings" },
+                    onAdjustSentences = { openSentenceChoices = true; page = "settings" },
+                    onProgress = { page = "progress" },
                     onProfiles = { page = "profiles" })
                 "profiles" -> ProfilesScreen(state.profiles, state.profileId, busy,
                     onSelect = { id -> model.selectProfile(id) { pendingProfileId = id } },
                     onCreate = { name -> model.createProfile(name) { pendingProfileId = it } },
                     onBack = { page = "home" })
-                "settings" -> SettingsScreen(state.settings, state.session != null, busy,
-                    onTheme = model::theme,
-                    onSave = { model.saveSettings(it) { page = "home" } },
-                    onLearningStages = { page = "progress" }, onBack = { page = "home" })
+                "settings" -> Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().then(if (showingPrivacy) Modifier.clearAndSetSemantics { } else Modifier)) {
+                        SettingsScreen(state.settings, state.session != null, busy,
+                            onTheme = model::theme,
+                            onSave = { model.saveSettings(it) { page = "home" } },
+                            onLearningStages = { page = "progress" },
+                            onPrivacy = { showingPrivacy = true }, onBack = { page = "home" },
+                            openSentenceChoices = openSentenceChoices)
+                    }
+                    if (showingPrivacy) Surface(
+                        Modifier.fillMaxSize().clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {},
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        AboutPrivacyScreen(onBack = { showingPrivacy = false })
+                    }
+                }
                 "progress" -> ProgressScreen(state, busy,
                     onSaveChoices = { config -> model.saveSettings(state.settings.copy(config = config)) {} },
                     onBack = { page = "home" })
                 "reading" -> state.card?.let { card ->
-                    PracticeScreen(card, state.settings, busy || paused, onScore = { model.score(card.id, it) }, onPause = { paused = true })
+                    PracticeScreen(card, state.settings, busy || paused,
+                        onScore = { model.score(card.id, it) }, onPause = { paused = true },
+                        onToggleButtons = { model.showScoringButtons(!state.settings.showButtons) })
                 } ?: Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }
             }
         }

@@ -1,5 +1,15 @@
 # Verification
 
+## Store-readiness polish 1.9 — 30 September 2026
+
+Home now shows the count from the actual sentence selector and offers Adjust choices when no short sentence is eligible. Settings and Learning stages explain that stages guide sentence selection by sounds and avoid calling unapproved content “reviewed.” Reading has a first-score swipe hint plus an immediate Show/Hide buttons control; that choice persists per profile. Settings opens About & privacy with accurate local-storage and deletion information. Release signing can be supplied through private environment variables; without them the release AAB is unsigned.
+
+- 40 local Kotlin tests, 42 connected tests on a separate Android 16 (API 36.1) emulator, debug lint, debug APK build, and release AAB build passed. Connected tests include the Home zero state and selector count, scoring guidance/buttons, persistence across profiles and restart, and Settings → privacy → Settings with unsaved choices intact.
+- A repeat run exposed a test-only race when `ReadingUiTest` closed its temporary database before stopping its ViewModel. The cleanup now cancels and joins that ViewModel first; the final 42-test run passed.
+- Home and Reading were visually checked at 1080×2400 portrait and 2400×1080 landscape: [Home](screenshots/1.9/home-light.png), [Reading](screenshots/1.9/reading-light.png). A narrow phone, tablet, 200% text, TalkBack, API 26/33, and a Play-installed bundle still need release-candidate checks.
+- Version 1.9, code 11, retains application ID `com.littlewords.app`. The development APK uses the prior debug signing certificate and SHA-256 `e5e223830762d157acc3233841b4eb3b2f228a337d0d4f42b9b1ab4cdcda92f1`; build, deliverable, and project-output copies match. The release AAB built successfully but is unsigned, so it cannot be submitted to Play yet.
+- The full privacy policy still needs a publisher contact and hosted URL, and all 130 sentences require recorded human review before public release. Existing debug-installed phone data also needs an export/import path before moving to a differently signed Play build.
+
 ## Slate blue and portrait navigation 1.8 — 28 September 2026
 
 Implemented the user-approved Slate blue palette in both appearances, including selected controls, links, progress bars and the launcher. Phone navigation is portrait; word/sentence reading and Pause remain landscape. Tablet and multi-window orientation is unrestricted. Headers and history adapt to portrait; large-text Home labels were corrected after visual inspection.
