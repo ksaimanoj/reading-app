@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import re
 import sys
 from collections import Counter
@@ -355,8 +356,72 @@ def render_report(rows: Sequence[Row]) -> str:
     return "\n".join(lines)
 
 
-def render_sentence_report(rows: Sequence[SentenceRow]) -> str:
+def sentence_frequency(
+    sentences: Sequence[SentenceRow],
+    words: Sequence[Row],
+    helpers: dict[str, tuple[str, ...]],
+) -> tuple[Counter[str], Counter[str]]:
+    real_counts: Counter[str] = Counter({item.word: 0 for item in words if item.category != "THREE_SILLY"})
+    helper_counts: Counter[str] = Counter({token: 0 for token in helpers})
+    for item in sentences:
+        for token in sentence_tokens(item.sentence):
+            if token in real_counts:
+                real_counts[token] += 1
+            elif token in helper_counts:
+                helper_counts[token] += 1
+    return real_counts, helper_counts
+
+
+def top_ten_share(counts: Counter[str]) -> float:
+    total = sum(counts.values())
+    return sum(count for _, count in counts.most_common(10)) / total if total else 0.0
+
+
+def validate_sentence_balance(
+    sentences: Sequence[SentenceRow],
+    words: Sequence[Row],
+    helpers: dict[str, tuple[str, ...]],
+    max_top_ten_share: float = 0.25,
+) -> list[str]:
+    real_counts, _ = sentence_frequency(sentences, words, helpers)
+    share = top_ten_share(real_counts)
+    if share > max_top_ten_share:
+        return [f"top-ten real-word share {share:.1%} exceeds {max_top_ten_share:.0%}"]
+    return []
+
+
+def render_sentence_frequency_csv(
+    sentences: Sequence[SentenceRow],
+    words: Sequence[Row],
+    helpers: dict[str, tuple[str, ...]],
+) -> str:
+    real_counts, helper_counts = sentence_frequency(sentences, words, helpers)
+    stages = {item.word: item.stage for item in words if item.category != "THREE_SILLY"}
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(("kind", "word", "stage", "count", "rank"))
+    for rank, (word, count) in enumerate(sorted(real_counts.items(), key=lambda item: (-item[1], item[0])), 1):
+        writer.writerow(("real", word, stages[word], count, rank))
+    for word, count in sorted(helper_counts.items(), key=lambda item: (-item[1], item[0])):
+        writer.writerow(("helper", word, "", count, ""))
+    return output.getvalue()
+
+
+def render_sentence_report(
+    rows: Sequence[SentenceRow],
+    words: Sequence[Row],
+    helpers: dict[str, tuple[str, ...]],
+) -> str:
     pattern_counts = Counter(pattern for item in rows for pattern in item.patterns)
+    real_counts, helper_counts = sentence_frequency(rows, words, helpers)
+    all_counts = real_counts + helper_counts
+    real_total = sum(real_counts.values())
+    helper_total = sum(helper_counts.values())
+    covered = sum(count > 0 for count in real_counts.values())
+    stage_words = Counter(item.stage for item in words if item.category != "THREE_SILLY")
+    stages = {item.word: item.stage for item in words if item.category != "THREE_SILLY"}
+    stage_covered = Counter(stages[word] for word, count in real_counts.items() if count > 0)
+    top_words = sorted(real_counts.items(), key=lambda item: (-item[1], item[0]))[:10]
     lines = [
         "# Generated sentence catalogue report",
         "",
@@ -365,11 +430,24 @@ def render_sentence_report(rows: Sequence[SentenceRow]) -> str:
         "Every sentence contains two to eight words from the real-word catalogue or explicit helper allowlist.",
         "Its required sound patterns are the exact union of its words' and helpers' tags.",
         "",
-        "## Patterns",
+        "## Coverage and repetition",
         "",
-        "| Pattern | Count |",
+        f"Real words covered: **{covered} of {len(real_counts)}**. Missing: **{len(real_counts) - covered}**.",
+        f"Real-word token occurrences: **{real_total}**. Helper token occurrences: **{helper_total}**.",
+        f"Top-ten real-word share: **{top_ten_share(real_counts):.1%}**. Top-ten share of all tokens, including helpers: **{top_ten_share(all_counts):.1%}**.",
+        "",
+        "| Most frequent real word | Occurrences |",
         "| --- | ---: |",
     ]
+    lines.extend(f"| `{word}` | {count} |" for word, count in top_words)
+    lines.extend(("", "| Stage | Covered real words | Library real words |", "| --- | ---: | ---: |"))
+    lines.extend(f"| {stage or 'unassigned'} | {stage_covered[stage]} | {count} |" for stage, count in sorted(stage_words.items()))
+    lines.extend(("", "## Helper words", "", "| Helper | Occurrences |", "| --- | ---: |"))
+    lines.extend(f"| `{word}` | {count} |" for word, count in sorted(helper_counts.items(), key=lambda item: (-item[1], item[0])))
+    missing = sorted(word for word, count in real_counts.items() if count == 0)
+    if missing:
+        lines.extend(("", "## Missing real words in this draft", "", ", ".join(f"`{word}`" for word in missing)))
+    lines.extend(("", "## Patterns", "", "| Pattern | Count |", "| --- | ---: |"))
     lines.extend(f"| `{name}` | {pattern_counts[name]} |" for name in PATTERNS)
     lines.extend((
         "",
@@ -433,11 +511,14 @@ def compile_sentence_files(
     helpers = parse_helper_csv(helper_source)
     errors = validate_sentences(rows, words, minimum_size=minimum_size, helpers=helpers,
                                 require_real_word_coverage=enforce_full_catalogue)
+    if enforce_full_catalogue:
+        errors.extend(validate_sentence_balance(rows, words, helpers))
     if errors:
         raise ValueError("\n".join(errors))
     expected = {
         kotlin_output: render_sentence_kotlin(rows),
-        report_output: render_sentence_report(rows),
+        report_output: render_sentence_report(rows, words, helpers),
+        frequency_output: render_sentence_frequency_csv(rows, words, helpers),
     }
     if check:
         stale = [path for path, content in expected.items() if not path.exists() or path.read_text(encoding="utf-8") != content]
@@ -452,6 +533,7 @@ def compile_sentence_files(
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="verify generated files without changing them")
+    parser.add_argument("--draft-report", action="store_true", help="print a non-enforcing sentence coverage report")
     parser.add_argument("--minimum-size", type=int, default=707)
     args = parser.parse_args(argv)
     root = Path(__file__).resolve().parents[1]
@@ -459,10 +541,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         word_rows = parse_csv(root / "content" / "words.csv")
         sentence_rows = parse_sentence_csv(root / "content" / "sentences.csv")
         helpers = parse_helper_csv(root / "content" / "sentence-helpers.csv")
+        if args.draft_report:
+            draft_errors = validate_sentences(sentence_rows, word_rows, helpers=helpers)
+            if draft_errors:
+                raise ValueError("\n".join(draft_errors))
+            print(render_sentence_report(sentence_rows, word_rows, helpers))
+            return 0
         preflight_errors = validate(word_rows, minimum_size=args.minimum_size,
                                     require_stage_membership=True)
         preflight_errors.extend(validate_sentences(sentence_rows, word_rows, helpers=helpers,
                                                   require_real_word_coverage=True))
+        preflight_errors.extend(validate_sentence_balance(sentence_rows, word_rows, helpers))
         if preflight_errors:
             raise ValueError("\n".join(preflight_errors))
         words_current = compile_files(

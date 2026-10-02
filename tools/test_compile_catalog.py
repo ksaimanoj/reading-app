@@ -240,6 +240,39 @@ class CatalogueCompilerTest(unittest.TestCase):
         )
         self.assertTrue(any("sat" in error for error in errors))
 
+    def test_sentence_frequency_counts_occurrences_and_excludes_silly_words(self):
+        words = [row("cat", "THREE_REAL", "short_a"), row("am", "TWO_REAL", "short_a"),
+                 row("glad", "FOUR_REAL", "short_a|blends"), row("sat", "THREE_REAL", "short_a"),
+                 row("bem", "THREE_SILLY", "short_e")]
+        sentences = [sentence_row("cat cat.", "short_a"),
+                     sentence_row("I am glad.", "short_a|blends|tricky")]
+        real_counts, helper_counts = compiler.sentence_frequency(sentences, words, {"I": ("tricky",)})
+        self.assertEqual(2, real_counts["cat"])
+        self.assertEqual(0, real_counts["sat"])
+        self.assertNotIn("bem", real_counts)
+        self.assertEqual(1, helper_counts["I"])
+        self.assertEqual(4, sum(real_counts.values()))
+        self.assertEqual(1, sum(helper_counts.values()))
+
+    def test_balance_uses_real_word_denominator_even_with_many_helpers(self):
+        tokens = "bat bed big bug bun bus cab cat cot cup cut dad den dig dog dot dug fan fed fin".split()
+        words = [row(token, "THREE_REAL", "short_a") for token in tokens]
+        sentences = [sentence_row(f"I {tokens[index]} I {tokens[index + 1]}.", "short_a|tricky")
+                     for index in range(0, 20, 2)]
+        errors = compiler.validate_sentence_balance(sentences, words, {"I": ("tricky",)})
+        self.assertTrue(any("50.0%" in error and "25%" in error for error in errors))
+
+    def test_sentence_frequency_outputs_are_deterministic(self):
+        words = [row("cat", "THREE_REAL", "short_a"), row("sat", "THREE_REAL", "short_a")]
+        first = [sentence_row("cat sat.", "short_a"), sentence_row("I sat.", "short_a|tricky")]
+        helpers = {"I": ("tricky",)}
+        self.assertEqual(
+            compiler.render_sentence_frequency_csv(first, words, helpers),
+            compiler.render_sentence_frequency_csv(list(reversed(first)), words, helpers),
+        )
+        self.assertIn("real,cat", compiler.render_sentence_frequency_csv(first, words, helpers))
+        self.assertIn("helper,I", compiler.render_sentence_frequency_csv(first, words, helpers))
+
 
 if __name__ == "__main__":
     unittest.main()
