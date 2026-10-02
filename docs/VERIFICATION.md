@@ -4,7 +4,7 @@
 
 The checked-in draft has 344 sentences covering all 475 real library words, with no silly words. The ten most frequent real words contribute 22.9% of real-word appearances; the [frequency table](../content/sentence-frequency.csv) lists every word and helper. The 342 new sentences and two retained sentences all lack a recorded final human decision. See [the review sheet](../content/sentence-human-review.csv) before any public release.
 
-The catalogue compiler check and 26 Python tests passed. All 43 local Android unit tests passed, and a debug APK was built at `app/build/outputs/apk/debug/app-debug.apk`. These checks cover helper eligibility, real-word progress from a sentence containing helpers, and progress from a sentence retired from the active list. They do not replace parent review or a device and visual release check. The APK was not installed on a device.
+The catalogue compiler check and 27 Python tests passed. All 43 local Android unit tests passed, and a debug APK was built at `app/build/outputs/apk/debug/app-debug.apk`. These checks cover helper eligibility, the exclusion of silly words and lowercase `i` from helpers, real-word progress from a sentence containing helpers, and progress from a sentence retired from the active list. They do not replace parent review or a device and visual release check. The APK was not installed on a device.
 
 Historical sentence attempts remain in History, and successful historical reads still credit real library words. The sentence progress total now counts the 344 active drafts.
 

@@ -124,6 +124,8 @@ def parse_helper_csv(path: Path) -> dict[str, tuple[str, ...]]:
             note = (raw["note"] or "").strip()
             if not re.fullmatch(r"I|[a-z]+", token):
                 raise ValueError(f"helper row {line}: invalid token '{token}'")
+            if token == "i":
+                raise ValueError(f"helper row {line}: lowercase 'i' is not allowed; use 'I'")
             if token in helpers:
                 raise ValueError(f"helper row {line}: duplicate helper '{token}'")
             if not patterns or len(set(patterns)) != len(patterns) or any(p not in PATTERN_ORDER for p in patterns):
@@ -240,10 +242,13 @@ def validate_sentences(
         occurrences.setdefault(item.sentence, []).append(item.line)
     duplicates = {sentence for sentence, lines in occurrences.items() if len(lines) > 1}
     real_words = {item.word: set(item.patterns) for item in words if item.category != "THREE_SILLY"}
+    library_words = {item.word for item in words}
     helper_tags = {token: set(patterns) for token, patterns in (helpers or {}).items()}
     for token in helper_tags:
-        if token in real_words:
-            errors.append(f"helper '{token}' duplicates a real library word")
+        if token == "i":
+            errors.append("helper 'i' is not allowed; use uppercase 'I'")
+        if token in library_words:
+            errors.append(f"helper '{token}' duplicates a real or silly library word")
     known_tags = {**real_words, **helper_tags}
     seen_real_words: set[str] = set()
 

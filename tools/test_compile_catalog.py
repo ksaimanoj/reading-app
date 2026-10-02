@@ -232,6 +232,21 @@ class CatalogueCompilerTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "review note"):
                 compiler.parse_helper_csv(source)
 
+    def test_helper_allowlist_cannot_legalize_silly_word_or_lowercase_i(self):
+        words = [row("am", "TWO_REAL", "short_a"), row("bem", "THREE_SILLY", "short_e")]
+        for token in ("bem", "i"):
+            with self.subTest(token=token):
+                errors = compiler.validate_sentences(
+                    [sentence_row(f"{token} am.", "short_a|tricky")], words,
+                    minimum_size=0, helpers={token: ("tricky",)},
+                )
+                self.assertTrue(any("helper" in error and token in error for error in errors))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "helpers.csv"
+            source.write_text("token,patterns,note\ni,tricky,Invalid lowercase pronoun\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "lowercase 'i'"):
+                compiler.parse_helper_csv(source)
+
     def test_sentence_validation_can_require_every_real_word(self):
         errors = compiler.validate_sentences(
             [sentence_row("cat cat.", "short_a")],
