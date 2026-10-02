@@ -1,3 +1,5 @@
 token,patterns,note
 I,tricky,First-person pronoun needed for natural sentences using am
 a,tricky,Article needed for natural singular noun phrases
+my,tricky,Possessive needed for natural body-part and lap sentences
+to,tricky,Preposition needed for natural destination and action sentences
