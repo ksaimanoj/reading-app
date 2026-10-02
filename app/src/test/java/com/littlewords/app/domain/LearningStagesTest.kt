@@ -67,6 +67,24 @@ class LearningStagesTest {
         assertEquals(WordStatus.CONFIDENT, WordProgressCalculator.calculate(words, attempts).getValue("cat").status)
     }
 
+    @Test fun helperWordsNeverGainMilestonesButHistoricalSentenceWordsDo() {
+        val words = Catalog.words
+        val retiredSentence = "I am a lad."
+        assertFalse(Catalog.sentences.any { it.text == retiredSentence })
+        val attempts = listOf(
+            ProgressAttempt("I am glad.", SENTENCE_CATEGORY, 1, true, 1),
+            ProgressAttempt("I am glad.", SENTENCE_CATEGORY, 2, true, 2),
+            ProgressAttempt(retiredSentence, SENTENCE_CATEGORY, 1, true, 3),
+            ProgressAttempt(retiredSentence, SENTENCE_CATEGORY, 2, true, 4),
+        )
+        val milestones = WordProgressCalculator.calculate(words, attempts)
+        setOf("am", "glad", "lad").forEach { word ->
+            assertEquals(WordStatus.CONFIDENT, milestones.getValue(word).status)
+        }
+        assertFalse("i" in milestones)
+        assertFalse("a" in milestones)
+    }
+
     @Test fun missedSentenceDoesNotMarkEveryWordAsNeedingPractice() {
         val words = Catalog.words.filter { it.text in setOf("cat", "can", "nap") }
         val attempts = listOf(
@@ -111,8 +129,9 @@ class LearningStagesTest {
     }
 
     @Test fun sentencePracticeMayUseSupportingCvcWordsWithoutEnablingTheCvcStage() {
-        val config = PracticeConfig(patterns = Catalog.patternLabels.keys, selectedSubskills = setOf("digraphs:sh"))
-        assertTrue(SentenceSelector.eligible(config).any { it.text == "dad can fish." })
+        val config = PracticeConfig(patterns = Catalog.patternLabels.keys,
+            selectedSubskills = setOf("digraphs:sh", "additional:tricky"))
+        assertTrue(SentenceSelector.eligible(config).any { it.text == "hush a pup." })
         assertFalse(SentenceSelector.eligible(config).any { "ch" in it.patterns })
         assertTrue(SentenceSelector.eligible(config.copy(selectedSubskills = setOf(StageCatalog.SILLY_KEY))).isEmpty())
     }

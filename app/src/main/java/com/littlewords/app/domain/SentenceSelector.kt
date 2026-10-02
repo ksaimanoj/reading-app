@@ -14,7 +14,7 @@ object SentenceSelector {
         return Catalog.sentences.filter { sentence ->
         sentence.patterns.all { it in config.patterns } &&
             (supported == null || sentence.patterns.all { it in supported }) &&
-            sentence.text.asSequence().filter { it.isLetter() }.all { it in config.letters }
+            sentence.text.asSequence().filter { it.isLetter() }.all { it.lowercaseChar() in config.letters }
         }
     }
 
