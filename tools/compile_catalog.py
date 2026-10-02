@@ -15,6 +15,8 @@ from typing import Iterable, Sequence
 
 HEADERS = ("word", "category", "patterns", "note", "stage", "subskill")
 SENTENCE_HEADERS = ("sentence", "patterns", "note")
+HELPER_HEADERS = ("token", "patterns", "note")
+SENTENCE_PATTERN = re.compile(r"(?:I|[a-z]+)(?:,? (?:I|[a-z]+)){1,7}[.?]")
 CATEGORY_LENGTHS = {
     "TWO_REAL": 2,
     "THREE_REAL": 3,
@@ -109,6 +111,34 @@ def parse_sentence_csv(path: Path) -> list[SentenceRow]:
         return rows
 
 
+def parse_helper_csv(path: Path) -> dict[str, tuple[str, ...]]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != HELPER_HEADERS:
+            raise ValueError(f"Expected CSV headers {','.join(HELPER_HEADERS)} in that order.")
+        helpers: dict[str, tuple[str, ...]] = {}
+        for line, raw in enumerate(reader, start=2):
+            token = (raw["token"] or "").strip()
+            patterns = tuple(part.strip() for part in (raw["patterns"] or "").split("|") if part.strip())
+            note = (raw["note"] or "").strip()
+            if not re.fullmatch(r"I|[a-z]+", token):
+                raise ValueError(f"helper row {line}: invalid token '{token}'")
+            if token in helpers:
+                raise ValueError(f"helper row {line}: duplicate helper '{token}'")
+            if not patterns or len(set(patterns)) != len(patterns) or any(p not in PATTERN_ORDER for p in patterns):
+                raise ValueError(f"helper row {line}: invalid sound patterns")
+            if not note:
+                raise ValueError(f"helper row {line}: a human review note is required")
+            helpers[token] = patterns
+        return helpers
+
+
+def sentence_tokens(sentence: str) -> list[str]:
+    if not SENTENCE_PATTERN.fullmatch(sentence) or sentence.count(",") > 1:
+        raise ValueError("use two to eight words, an optional internal comma, and a period or question mark")
+    return sentence[:-1].replace(",", "").split()
+
+
 def validate(rows: Sequence[Row], minimum_size: int = 707, require_coverage: bool = True,
              require_stage_membership: bool = False) -> list[str]:
     errors: list[str] = []
@@ -200,6 +230,8 @@ def validate_sentences(
     sentences: Sequence[SentenceRow],
     words: Sequence[Row],
     minimum_size: int = 120,
+    helpers: dict[str, tuple[str, ...]] | None = None,
+    require_real_word_coverage: bool = False,
 ) -> list[str]:
     errors: list[str] = []
     occurrences: dict[str, list[int]] = {}
@@ -207,13 +239,22 @@ def validate_sentences(
         occurrences.setdefault(item.sentence, []).append(item.line)
     duplicates = {sentence for sentence, lines in occurrences.items() if len(lines) > 1}
     real_words = {item.word: set(item.patterns) for item in words if item.category != "THREE_SILLY"}
+    helper_tags = {token: set(patterns) for token, patterns in (helpers or {}).items()}
+    for token in helper_tags:
+        if token in real_words:
+            errors.append(f"helper '{token}' duplicates a real library word")
+    known_tags = {**real_words, **helper_tags}
+    seen_real_words: set[str] = set()
 
     for item in sentences:
         prefix = f"sentence row {item.line}:"
         if item.sentence in duplicates:
             errors.append(f"{prefix} duplicate sentence '{item.sentence}'")
-        if not re.fullmatch(r"[a-z]+(?: [a-z]+){1,5}\.", item.sentence):
-            errors.append(f"{prefix} use two to six lowercase words followed by one period")
+        try:
+            tokens = sentence_tokens(item.sentence)
+        except ValueError as error:
+            errors.append(f"{prefix} {error}")
+            continue
         if not item.note:
             errors.append(f"{prefix} a human review note is required")
 
@@ -225,17 +266,21 @@ def validate_sentences(
             if pattern not in PATTERN_ORDER:
                 errors.append(f"{prefix} unknown pattern '{pattern}'")
 
-        tokens = item.sentence.removesuffix(".").split()
-        unknown_words = sorted({token for token in tokens if token not in real_words})
+        unknown_words = sorted({token for token in tokens if token not in known_tags})
         for word in unknown_words:
-            errors.append(f"{prefix} word '{word}' is not in the reviewed real-word catalogue")
-        expected_patterns = set().union(*(real_words.get(token, set()) for token in tokens))
+            errors.append(f"{prefix} word '{word}' is not in the reviewed real-word catalogue or helper allowlist")
+        expected_patterns = set().union(*(known_tags.get(token, set()) for token in tokens))
         if set(item.patterns) != expected_patterns:
             expected = "|".join(sorted(expected_patterns, key=lambda value: PATTERN_ORDER.get(value, 999)))
             errors.append(f"{prefix} patterns must exactly match the sentence words: {expected}")
+        seen_real_words.update(token for token in tokens if token in real_words)
 
     if len(sentences) < minimum_size:
         errors.append(f"sentence catalogue has {len(sentences)} entries; expected at least {minimum_size}")
+    if require_real_word_coverage:
+        missing = sorted(real_words.keys() - seen_real_words)
+        if missing:
+            errors.append(f"sentence catalogue is missing {len(missing)} real words: {', '.join(missing)}")
     return errors
 
 
@@ -317,8 +362,8 @@ def render_sentence_report(rows: Sequence[SentenceRow]) -> str:
         "",
         f"Total curated sentence drafts: **{len(rows)}**",
         "",
-        "Every sentence contains two to six words from the reviewed real-word catalogue.",
-        "Its required sound patterns are the exact union of its words' tags.",
+        "Every sentence contains two to eight words from the real-word catalogue or explicit helper allowlist.",
+        "Its required sound patterns are the exact union of its words' and helpers' tags.",
         "",
         "## Patterns",
         "",
@@ -377,12 +422,17 @@ def compile_sentence_files(
     kotlin_output: Path,
     report_output: Path,
     *,
+    helper_source: Path,
+    frequency_output: Path,
     check: bool,
     minimum_size: int = 120,
+    enforce_full_catalogue: bool = True,
 ) -> bool:
     rows = parse_sentence_csv(source)
     words = parse_csv(word_source)
-    errors = validate_sentences(rows, words, minimum_size=minimum_size)
+    helpers = parse_helper_csv(helper_source)
+    errors = validate_sentences(rows, words, minimum_size=minimum_size, helpers=helpers,
+                                require_real_word_coverage=enforce_full_catalogue)
     if errors:
         raise ValueError("\n".join(errors))
     expected = {
@@ -408,9 +458,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         word_rows = parse_csv(root / "content" / "words.csv")
         sentence_rows = parse_sentence_csv(root / "content" / "sentences.csv")
+        helpers = parse_helper_csv(root / "content" / "sentence-helpers.csv")
         preflight_errors = validate(word_rows, minimum_size=args.minimum_size,
                                     require_stage_membership=True)
-        preflight_errors.extend(validate_sentences(sentence_rows, word_rows))
+        preflight_errors.extend(validate_sentences(sentence_rows, word_rows, helpers=helpers,
+                                                  require_real_word_coverage=True))
         if preflight_errors:
             raise ValueError("\n".join(preflight_errors))
         words_current = compile_files(
@@ -425,6 +477,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             root / "content" / "words.csv",
             root / "app" / "src" / "main" / "java" / "com" / "littlewords" / "app" / "domain" / "SentenceCatalogData.kt",
             root / "content" / "sentence-catalog-report.md",
+            helper_source=root / "content" / "sentence-helpers.csv",
+            frequency_output=root / "content" / "sentence-frequency.csv",
             check=args.check,
         )
     except (OSError, ValueError) as error:

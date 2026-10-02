@@ -184,6 +184,62 @@ class CatalogueCompilerTest(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertLess(first.index('Sentence("cat ran."'), first.index('Sentence("dad sat."'))
 
+    def test_sentence_validation_accepts_helpers_questions_and_commas(self):
+        words = [
+            row("am", "TWO_REAL", "short_a"), row("glad", "FOUR_REAL", "short_a|blends"),
+            row("what", "FOUR_REAL", "tricky"), row("is", "TWO_REAL", "tricky"),
+            row("in", "TWO_REAL", "short_i"), row("the", "THREE_REAL", "th|tricky"),
+            row("box", "THREE_REAL", "short_o"), row("if", "TWO_REAL", "short_i"),
+            row("you", "THREE_REAL", "tricky"), row("can", "THREE_REAL", "short_a"),
+            row("run", "THREE_REAL", "short_u"),
+        ]
+        sentences = [
+            sentence_row("I am glad.", "short_a|blends|tricky"),
+            sentence_row("what is in the box?", "short_i|short_o|th|tricky", line=3),
+            sentence_row("if you can, run.", "short_a|short_i|short_u|tricky", line=4),
+        ]
+        self.assertEqual([], compiler.validate_sentences(
+            sentences, words, minimum_size=0, helpers={"I": ("tricky",), "a": ("tricky",)},
+        ))
+        self.assertEqual(["if", "you", "can", "run"], compiler.sentence_tokens("if you can, run."))
+
+    def test_sentence_validation_rejects_unreviewed_tokens_and_bad_format(self):
+        words = [row("am", "TWO_REAL", "short_a"), row("glad", "FOUR_REAL", "short_a|blends"),
+                 row("bem", "THREE_SILLY", "short_e")]
+        helpers = {"I": ("tricky",)}
+        for text in ("i am glad.", "zed am glad.", "bem am glad."):
+            with self.subTest(text=text):
+                errors = compiler.validate_sentences(
+                    [sentence_row(text, "short_a|blends|tricky")], words,
+                    minimum_size=0, helpers=helpers,
+                )
+                self.assertTrue(any("not in the reviewed real-word catalogue" in error for error in errors))
+        errors = compiler.validate_sentences(
+            [sentence_row("I am glad!", "short_a|blends|tricky")], words,
+            minimum_size=0, helpers=helpers,
+        )
+        self.assertTrue(any("two to eight" in error for error in errors))
+        errors = compiler.validate_sentences(
+            [sentence_row("I am glad.", "short_a|blends")], words,
+            minimum_size=0, helpers=helpers,
+        )
+        self.assertTrue(any("patterns must exactly match" in error for error in errors))
+
+    def test_helper_csv_requires_a_review_note(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "helpers.csv"
+            source.write_text("token,patterns,note\nI,tricky,\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "review note"):
+                compiler.parse_helper_csv(source)
+
+    def test_sentence_validation_can_require_every_real_word(self):
+        errors = compiler.validate_sentences(
+            [sentence_row("cat cat.", "short_a")],
+            [row("cat", "THREE_REAL", "short_a"), row("sat", "THREE_REAL", "short_a")],
+            minimum_size=0, require_real_word_coverage=True,
+        )
+        self.assertTrue(any("sat" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()
