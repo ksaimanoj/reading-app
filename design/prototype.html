@@ -120,6 +120,8 @@ body.dark input:focus-visible { outline-color: var(--primary); }
 .device .home-panel .availability strong{color:var(--ink)}
 .device .home-panel .adjust-choices{justify-self:start;text-align:left}
 .device .practice-head-actions{display:flex;align-items:center;gap:4px}
+.device .practice-counter{display:inline-flex;align-items:baseline;gap:9px;color:var(--muted);white-space:nowrap}
+.device .practice-counter-number{font-size:17px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
 .device .practice-head-actions .text-btn{font-size:13px;padding:6px 8px;white-space:nowrap}
 .device .score-hint{flex:none;margin:0;padding:4px 14px 7px;text-align:center;font-size:13px;color:var(--muted)}
 .device .privacy-list{padding-left:20px;margin:8px 0 16px}.device .privacy-list li{margin:8px 0}
@@ -160,7 +162,8 @@ function practice(){
  const item=cards[state.mode][state.card%cards[state.mode].length],isSentence=state.mode==='sentence';
  const label=isSentence?'short sentence':item[1]==='silly word'&&state.sillyMarker?'✦  silly word':'';
  const hint=!state.showButtons&&!state.scoringHintSeen?'<p class="score-hint">Swipe right for “Read it”; swipe left for “Needs practice”. Or show scoring buttons.</p>':'';
- return frame(`<div class="screen practice"><div class="practice-head"><span class="practice-label">${label}</span><div class="practice-head-actions"><button class="text-btn" data-action="toggle-scoring" aria-pressed="${state.showButtons}">${state.showButtons?'Hide buttons':'Show buttons'}</button><button class="text-btn" data-action="pause">Pause</button></div></div><div class="reading-surface" id="readingSurface"><div class="reading-word ${isSentence?'sentence':''}">${e(item[0])}</div></div>${state.showButtons?`<div class="score-row">${btn('←  Needs practice','score-no','outline')}${btn('Read it  →','score-yes')}</div>`:`${hint}<div class="score-spacer"></div>`}</div>`,true);
+ const count=state.attempts+1;
+ return frame(`<div class="screen practice"><div class="practice-head"><span class="practice-counter" aria-label="${isSentence?'Sentence':'Word'} ${count}"><span class="practice-counter-number">${count}</span><span class="practice-label">${label||'word'}</span></span><div class="practice-head-actions"><button class="text-btn" data-action="toggle-scoring" aria-pressed="${state.showButtons}">${state.showButtons?'Hide buttons':'Show buttons'}</button><button class="text-btn" data-action="pause">Pause</button></div></div><div class="reading-surface" id="readingSurface"><div class="reading-word ${isSentence?'sentence':''}">${e(item[0])}</div></div>${state.showButtons?`<div class="score-row">${btn('←  Needs practice','score-no','outline')}${btn('Read it  →','score-yes')}</div>`:`${hint}<div class="score-spacer"></div>`}</div>`,true);
 }
 function pauseDialog(){return `<div class="dialog-shade"><div class="dialog" role="dialog" aria-modal="true" aria-label="Practice paused" tabindex="-1"><h2>Take your time</h2><p>Your place is saved. A little practice is enough.</p>${state.last?'<button class="text-btn" data-action="undo">Undo last swipe</button>':''}<br><button class="text-btn" data-action="save-home">Save & go home</button><div class="dialog-actions"><button class="text-btn" data-action="end">End practice</button>${btn('Keep reading','keep-reading')}</div></div></div>`}
 // Illustrative proposal: two independent sentence reads in separate sessions credit cat, can, and nap.

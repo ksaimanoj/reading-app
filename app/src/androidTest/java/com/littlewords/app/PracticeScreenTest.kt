@@ -23,7 +23,7 @@ class PracticeScreenTest {
         var settings by mutableStateOf(AppSettings())
         var scoreCount by mutableIntStateOf(0)
         compose.setContent {
-            PracticeScreen(card, settings, busy = false,
+            PracticeScreen(card, settings, itemNumber = scoreCount + 1, busy = false,
                 onScore = {
                     scoreCount++
                     card = card.copy(id = card.id + 1, word = "dog")

@@ -127,7 +127,9 @@ private fun Context.activity(): Activity? = when (this) {
                     onSaveChoices = { config -> model.saveSettings(state.settings.copy(config = config)) {} },
                     onBack = { page = "home" })
                 "reading" -> state.card?.let { card ->
-                    PracticeScreen(card, state.settings, busy || paused,
+                    PracticeScreen(card, state.settings,
+                        itemNumber = 1 + state.validHistory.count { it.sessionId == card.sessionId },
+                        busy = busy || paused,
                         onScore = { model.score(card.id, it) }, onPause = { paused = true },
                         onToggleButtons = { model.showScoringButtons(!state.settings.showButtons) })
                 } ?: Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) { CircularProgressIndicator() }

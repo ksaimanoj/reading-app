@@ -12,6 +12,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,7 @@ import kotlin.math.abs
 @Composable fun PracticeScreen(
     card: CardEntity,
     settings: AppSettings,
+    itemNumber: Int,
     busy: Boolean,
     onScore: (Boolean) -> Unit,
     onPause: () -> Unit,
@@ -42,11 +45,22 @@ import kotlin.math.abs
     val isSentence = card.category == SENTENCE_CATEGORY
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) {
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    itemNumber.toString(),
+                    modifier = Modifier.testTag("sessionCount").semantics {
+                        contentDescription = "${if (isSentence) "Sentence" else "Word"} $itemNumber"
+                    },
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(9.dp))
                 if (settings.showSillyMarker && card.category == Category.THREE_SILLY.name)
                     Text("✦  silly word", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (isSentence)
                     Text("short sentence", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else Text("word", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onToggleButtons, enabled = !busy) {
                 Text(if (settings.showButtons) "Hide buttons" else "Show buttons")

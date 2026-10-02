@@ -78,6 +78,31 @@ class ReadingUiTest {
         assertTrue(card.word.contains(" "))
     }
 
+    @Test fun sessionCountTracksSentenceScoresUndoAndResume() {
+        compose.onNodeWithText("Try short sentences").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("sessionCount").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("sessionCount").assertContentDescriptionEquals("Sentence 1")
+
+        compose.onNodeWithTag("readingSurface").performTouchInput { swipeRight() }
+        compose.waitUntil(10000) {
+            compose.onAllNodesWithContentDescription("Sentence 2").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("readingSurface").performTouchInput { swipeLeft() }
+        compose.waitUntil(10000) {
+            compose.onAllNodesWithContentDescription("Sentence 3").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("Pause").performClick()
+        compose.onNodeWithText("Undo last swipe").performClick()
+        compose.waitUntil(10000) {
+            compose.onAllNodesWithContentDescription("Sentence 2").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Pause").performClick()
+        compose.onNodeWithText("Save & go home").performClick()
+        compose.onNodeWithText("Resume reading").performClick()
+        compose.onNodeWithTag("sessionCount").assertContentDescriptionEquals("Sentence 2")
+    }
+
     @Test fun progressExpandsASectionWithItsReadingAndTiming() {
         compose.onNodeWithText("Try short sentences").performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithTag("readingSurface").fetchSemanticsNodes().isNotEmpty() }
