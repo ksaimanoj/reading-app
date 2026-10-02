@@ -47,7 +47,7 @@ Settings and reading history survive a normal APK upgrade when the new APK keeps
 
 ## Updating the bundled reading content
 
-The editable sources of truth are `content/words.csv` and `content/sentences.csv`. Word rows contain the word, its length group, sound-pattern tags, an optional review note, and explicit primary stage and subskill. The compiler validates membership and produces stage counts in `content/catalog-report.md`. Sentence rows contain two to six real words from the reviewed word catalogue, their exact combined sound-pattern tags, and a required content-review note. The compiler rejects unknown or silly words inside sentences and rejects incomplete pattern tagging.
+The editable sources of truth are `content/words.csv`, `content/sentences.csv`, and `content/sentence-helpers.csv`. Word rows contain the word, its length group, sound-pattern tags, an optional review note, and explicit primary stage and subskill. The compiler validates membership and produces stage counts in `content/catalog-report.md`. Each sentence has two to eight words drawn from the real-word catalogue or the explicit helper allowlist (`I`, `a`, `my`, `to`), exact combined sound-pattern tags, and a content-review note. The compiler rejects unknown or silly words, checks that all 475 real words appear, and limits the ten most frequent real words to 25% of real-word appearances. The full distribution is in `content/sentence-frequency.csv`.
 
 Android builds use the checked-in generated `CatalogData.kt` and `SentenceCatalogData.kt`, so building the APK does not require Python or internet access.
 
@@ -60,7 +60,7 @@ python3 tools/compile_catalog.py --check
 ./gradlew :app:assembleDebug
 ```
 
-The first command validates both catalogues, regenerates the Kotlin data, and updates the reports in `content/`. The check command verifies that generated content is current without changing files. Invalid rows report their CSV row numbers and do not replace the last valid generated files.
+The first command validates both catalogues, regenerates the Kotlin data, and updates the reports in `content/`. The check command verifies that generated content is current without changing files. Invalid rows report their CSV row numbers and do not replace the last valid generated files. After changing sentence text or tags, run `python3 -m tools.sync_sentence_review` and use [the review sheet](content/sentence-human-review.csv) to record the parent or educator decision for each row.
 
 ## Building from source
 
@@ -74,6 +74,6 @@ The generated APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Content note
 
-The bundled word catalogue contains 707 entries across two- through five-letter real words and three-letter silly words. A separate catalogue contains 130 short sentences assembled only from bundled real words. Newly added sentences are original decodable drafts and should be checked by a parent before wider use. Invented words are drawn from a fixed pool rather than generated on the device. Structural checks cannot fully verify pronunciation, regional meaning, grammar, or teaching suitability, so the exact content should receive a parent or educator review before broader distribution.
+The bundled word catalogue contains 707 entries: 475 real words and 232 three-letter silly words. The 344 sentence drafts cover every real word, include no silly word, and have a 22.9% top-ten real-word frequency share. They use four explicit helpers. All 344 sentences still need a recorded parent or educator decision before broader distribution. Invented words are drawn from a fixed pool rather than generated on the device. Structural checks cannot fully verify pronunciation, regional meaning, grammar, or teaching suitability.
 
 See [verification results](docs/VERIFICATION.md), the [original app design](../docs/superpowers/specs/2026-09-17-reading-app-design.md), and the [catalogue expansion design](../docs/superpowers/specs/2026-09-19-word-catalogue-expansion-design.md).

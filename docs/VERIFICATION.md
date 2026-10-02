@@ -1,5 +1,13 @@
 # Verification
 
+## Balanced sentence catalogue draft — 2 October 2026
+
+The checked-in draft has 344 sentences covering all 475 real library words, with no silly words. The ten most frequent real words contribute 22.9% of real-word appearances; the [frequency table](../content/sentence-frequency.csv) lists every word and helper. The 342 new sentences and two retained sentences all lack a recorded final human decision. See [the review sheet](../content/sentence-human-review.csv) before any public release.
+
+The catalogue compiler check and 26 Python tests passed. All 43 local Android unit tests passed, and a debug APK was built at `app/build/outputs/apk/debug/app-debug.apk`. These checks cover helper eligibility, real-word progress from a sentence containing helpers, and progress from a sentence retired from the active list. They do not replace parent review or a device and visual release check. The APK was not installed on a device.
+
+Historical sentence attempts remain in History, and successful historical reads still credit real library words. The sentence progress total now counts the 344 active drafts.
+
 ## Store-readiness polish 1.9 — 30 September 2026
 
 Home now shows the count from the actual sentence selector and offers Adjust choices when no short sentence is eligible. Settings and Learning stages explain that stages guide sentence selection by sounds and avoid calling unapproved content “reviewed.” Reading has a first-score swipe hint plus an immediate Show/Hide buttons control; that choice persists per profile. Settings opens About & privacy with accurate local-storage and deletion information. Release signing can be supplied through private environment variables; without them the release AAB is unsigned.
@@ -8,7 +16,7 @@ Home now shows the count from the actual sentence selector and offers Adjust cho
 - A repeat run exposed a test-only race when `ReadingUiTest` closed its temporary database before stopping its ViewModel. The cleanup now cancels and joins that ViewModel first; the final 42-test run passed.
 - Home and Reading were visually checked at 1080×2400 portrait and 2400×1080 landscape: [Home](screenshots/1.9/home-light.png), [Reading](screenshots/1.9/reading-light.png). A narrow phone, tablet, 200% text, TalkBack, API 26/33, and a Play-installed bundle still need release-candidate checks.
 - Version 1.9, code 11, retains application ID `com.littlewords.app`. The development APK uses the prior debug signing certificate and SHA-256 `e5e223830762d157acc3233841b4eb3b2f228a337d0d4f42b9b1ab4cdcda92f1`; build, deliverable, and project-output copies match. The release AAB built successfully but is unsigned, so it cannot be submitted to Play yet.
-- The full privacy policy still needs a publisher contact and hosted URL, and all 130 sentences require recorded human review before public release. Existing debug-installed phone data also needs an export/import path before moving to a differently signed Play build.
+- At the time of this release check, the full privacy policy still needed a publisher contact and hosted URL, and the then-current 130 sentences required recorded human review before public release. Existing debug-installed phone data also needed an export/import path before moving to a differently signed Play build.
 
 ## Slate blue and portrait navigation 1.8 — 28 September 2026
 
@@ -67,7 +75,7 @@ The 1.6 debug APK is `deliverables/LittleWords-debug.apk`. Its SHA-256 is `24363
 
 Verified on 22 September 2026 with a dedicated Android 16 API 36.1 arm64 emulator. Version 1.4 was also installed over version 1.3 on the connected family phone; the app opened, its database reached schema version 3, and the user confirmed it worked. Version 1.5 was checked on the emulator only.
 
-## Current catalogue
+## 1.5 catalogue
 
 The bundled catalogue contains 707 unique entries:
 
