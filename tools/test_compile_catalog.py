@@ -168,7 +168,7 @@ class CatalogueCompilerTest(unittest.TestCase):
             [sentence_row("cat sat.", "short_i")], words, minimum_size=0,
         )
 
-        self.assertTrue(any("not in the reviewed real-word catalogue" in error for error in unknown))
+        self.assertTrue(any("not in the real-word catalogue" in error for error in unknown))
         self.assertTrue(any("patterns must exactly match" in error for error in wrong_patterns))
 
     def test_sentence_rendering_is_deterministic(self):
@@ -213,7 +213,7 @@ class CatalogueCompilerTest(unittest.TestCase):
                     [sentence_row(text, "short_a|blends|tricky")], words,
                     minimum_size=0, helpers=helpers,
                 )
-                self.assertTrue(any("not in the reviewed real-word catalogue" in error for error in errors))
+                self.assertTrue(any("not in the real-word catalogue" in error for error in errors))
         errors = compiler.validate_sentences(
             [sentence_row("I am glad!", "short_a|blends|tricky")], words,
             minimum_size=0, helpers=helpers,
@@ -229,7 +229,7 @@ class CatalogueCompilerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "helpers.csv"
             source.write_text("token,patterns,note\nI,tricky,\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "review note"):
+            with self.assertRaisesRegex(ValueError, "rationale note"):
                 compiler.parse_helper_csv(source)
 
     def test_helper_allowlist_cannot_legalize_silly_word_or_lowercase_i(self):

@@ -1,12 +1,12 @@
 # Verification
 
-## Balanced sentence catalogue draft — 2 October 2026
+## Active balanced sentence catalogue — 2 October 2026
 
-The checked-in draft has 344 sentences covering all 475 real library words, with no silly words. The ten most frequent real words contribute 22.9% of real-word appearances; the [frequency table](../content/sentence-frequency.csv) lists every word and helper. The 342 new sentences and two retained sentences all lack a recorded final human decision. See [the review sheet](../content/sentence-human-review.csv) before any public release.
+The checked-in active list has 344 sentences covering all 475 real library words, with no silly words. The ten most frequent real words contribute 22.9% of real-word appearances; the [frequency table](../content/sentence-frequency.csv) lists every word and helper. All 344 sentences are in the Android catalogue, with no parent-approval status gating inclusion.
 
-The catalogue compiler check and 27 Python tests passed. All 43 local Android unit tests passed, and a debug APK was built at `app/build/outputs/apk/debug/app-debug.apk`. These checks cover helper eligibility, the exclusion of silly words and lowercase `i` from helpers, real-word progress from a sentence containing helpers, and progress from a sentence retired from the active list. They do not replace parent review or a device and visual release check. The APK was not installed on a device.
+The catalogue compiler check and 24 Python tests passed. All 43 local Android unit tests passed. The version 1.10 debug APK (code 12) was built and copied to `deliverables/LittleWords-debug.apk`; it matches `app/build/outputs/apk/debug/app-debug.apk` at SHA-256 `99d3e5087317d70d436a916164c63e365561af73162a8dbe1e346fc45591ef26`. The signer matches the prior debug APK. These checks cover helper eligibility, the exclusion of silly words and lowercase `i` from helpers, real-word progress from a sentence containing helpers, and progress from a sentence retired from the active list. A device and visual release check remain outstanding. The APK was not installed on a device.
 
-Historical sentence attempts remain in History, and successful historical reads still credit real library words. The sentence progress total now counts the 344 active drafts.
+Historical sentence attempts remain in History, and successful historical reads still credit real library words. The sentence progress total now counts the 344 active sentences.
 
 ## Store-readiness polish 1.9 — 30 September 2026
 
@@ -89,7 +89,7 @@ The bundled catalogue contains 707 unique entries:
 
 The generated report is at [`../content/catalog-report.md`](../content/catalog-report.md). The CSV compiler and its check-only mode passed against the checked-in generated Kotlin file.
 
-The separate sentence catalogue contains 130 entries: the previous 60 plus 70 new original decodable drafts. Every sentence has two to six words, uses only real words from the bundled word catalogue, and carries the exact union of those words' sound-pattern tags. With the app's default sound settings, 100 are eligible; with the family phone's settings, 101 are eligible. Its generated report is at [`../content/sentence-catalog-report.md`](../content/sentence-catalog-report.md). New drafts still need parent review for naturalness and suitability.
+The separate sentence catalogue at version 1.5 contained 130 entries: the previous 60 plus 70 new original decodable drafts. Every sentence had two to six words, used only real words from the bundled word catalogue, and carried the exact union of those words' sound-pattern tags. With that version's default sound settings, 100 were eligible; with the family phone's settings, 101 were eligible. The current catalogue and report are described at the top of this document.
 
 ## Automated checks
 

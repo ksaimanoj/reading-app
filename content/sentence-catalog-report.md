@@ -1,6 +1,6 @@
 # Generated sentence catalogue report
 
-Total curated sentence drafts: **344**
+Active sentences: **344**
 
 Every sentence contains two to eight words from the real-word catalogue or explicit helper allowlist.
 Its required sound patterns are the exact union of its words' and helpers' tags.
@@ -58,6 +58,6 @@ Top-ten real-word share: **22.9%**. Top-ten share of all tokens, including helpe
 | `tricky` | 325 |
 | `two_syllables` | 36 |
 
-## Review boundary
+## Content checks
 
-The compiler verifies structure and word/tag consistency. New sentence drafts still require parent or educator review for meaning, grammar, dialect, and teaching suitability.
+All listed sentences are included in the app catalogue. The compiler checks structure and word/tag consistency; it cannot assess every aspect of meaning, grammar, dialect, or child suitability.

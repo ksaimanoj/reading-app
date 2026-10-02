@@ -1,5 +1,7 @@
 # Real-word sentence coverage and balance
 
+> Historical design note: the user subsequently chose to include all curated sentences in the active catalogue without a parent-approval gate. The current workflow is in [Sentence content](../../SENTENCE_CONTENT.md).
+
 Date: 2026-10-02
 
 ## Purpose and agreed scope

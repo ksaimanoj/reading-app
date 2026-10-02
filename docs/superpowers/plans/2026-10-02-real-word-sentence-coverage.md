@@ -1,5 +1,7 @@
 # Real-Word Sentence Coverage Implementation Plan
 
+> Historical plan: the user subsequently chose to include all curated sentences in the active catalogue without a parent-approval gate. The current workflow is in [Sentence content](../../SENTENCE_CONTENT.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make curated sentence practice cover every real library word while reducing concentration in the ten most repeated real words.

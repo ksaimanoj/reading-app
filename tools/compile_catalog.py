@@ -131,7 +131,7 @@ def parse_helper_csv(path: Path) -> dict[str, tuple[str, ...]]:
             if not patterns or len(set(patterns)) != len(patterns) or any(p not in PATTERN_ORDER for p in patterns):
                 raise ValueError(f"helper row {line}: invalid sound patterns")
             if not note:
-                raise ValueError(f"helper row {line}: a human review note is required")
+                raise ValueError(f"helper row {line}: a rationale note is required")
             helpers[token] = patterns
         return helpers
 
@@ -262,7 +262,7 @@ def validate_sentences(
             errors.append(f"{prefix} {error}")
             continue
         if not item.note:
-            errors.append(f"{prefix} a human review note is required")
+            errors.append(f"{prefix} a content note is required")
 
         seen_patterns: set[str] = set()
         for pattern in item.patterns:
@@ -274,7 +274,7 @@ def validate_sentences(
 
         unknown_words = sorted({token for token in tokens if token not in known_tags})
         for word in unknown_words:
-            errors.append(f"{prefix} word '{word}' is not in the reviewed real-word catalogue or helper allowlist")
+            errors.append(f"{prefix} word '{word}' is not in the real-word catalogue or helper allowlist")
         expected_patterns = set().union(*(known_tags.get(token, set()) for token in tokens))
         if set(item.patterns) != expected_patterns:
             expected = "|".join(sorted(expected_patterns, key=lambda value: PATTERN_ORDER.get(value, 999)))
@@ -430,7 +430,7 @@ def render_sentence_report(
     lines = [
         "# Generated sentence catalogue report",
         "",
-        f"Total curated sentence drafts: **{len(rows)}**",
+        f"Active sentences: **{len(rows)}**",
         "",
         "Every sentence contains two to eight words from the real-word catalogue or explicit helper allowlist.",
         "Its required sound patterns are the exact union of its words' and helpers' tags.",
@@ -456,9 +456,9 @@ def render_sentence_report(
     lines.extend(f"| `{name}` | {pattern_counts[name]} |" for name in PATTERNS)
     lines.extend((
         "",
-        "## Review boundary",
+        "## Content checks",
         "",
-        "The compiler verifies structure and word/tag consistency. New sentence drafts still require parent or educator review for meaning, grammar, dialect, and teaching suitability.",
+        "All listed sentences are included in the app catalogue. The compiler checks structure and word/tag consistency; it cannot assess every aspect of meaning, grammar, dialect, or child suitability.",
         "",
     ))
     return "\n".join(lines)
